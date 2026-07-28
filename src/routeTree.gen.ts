@@ -9,38 +9,232 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
+import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
+import { Route as AuthenticatedCursoSlugRouteImport } from './routes/_authenticated/curso.$slug'
+import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin/cursos'
+import { Route as AuthenticatedAdminAlunosRouteImport } from './routes/_authenticated/admin/alunos'
+import { Route as AuthenticatedCursoSlugSimuladoExamIdRouteImport } from './routes/_authenticated/curso.$slug.simulado.$examId'
+import { Route as AuthenticatedCursoSlugMetaGoalIdRouteImport } from './routes/_authenticated/curso.$slug.meta.$goalId'
+import { Route as AuthenticatedCursoSlugAulaLessonIdRouteImport } from './routes/_authenticated/curso.$slug.aula.$lessonId'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProgressoRoute = AuthenticatedProgressoRouteImport.update({
+  id: '/progresso',
+  path: '/progresso',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
+} as any)
+const AuthenticatedCursoSlugRoute = AuthenticatedCursoSlugRouteImport.update({
+  id: '/curso/$slug',
+  path: '/curso/$slug',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminCursosRoute =
+  AuthenticatedAdminCursosRouteImport.update({
+    id: '/cursos',
+    path: '/cursos',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminAlunosRoute =
+  AuthenticatedAdminAlunosRouteImport.update({
+    id: '/alunos',
+    path: '/alunos',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedCursoSlugSimuladoExamIdRoute =
+  AuthenticatedCursoSlugSimuladoExamIdRouteImport.update({
+    id: '/simulado/$examId',
+    path: '/simulado/$examId',
+    getParentRoute: () => AuthenticatedCursoSlugRoute,
+  } as any)
+const AuthenticatedCursoSlugMetaGoalIdRoute =
+  AuthenticatedCursoSlugMetaGoalIdRouteImport.update({
+    id: '/meta/$goalId',
+    path: '/meta/$goalId',
+    getParentRoute: () => AuthenticatedCursoSlugRoute,
+  } as any)
+const AuthenticatedCursoSlugAulaLessonIdRoute =
+  AuthenticatedCursoSlugAulaLessonIdRouteImport.update({
+    id: '/aula/$lessonId',
+    path: '/aula/$lessonId',
+    getParentRoute: () => AuthenticatedCursoSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
+  '/progresso': typeof AuthenticatedProgressoRoute
+  '/admin/alunos': typeof AuthenticatedAdminAlunosRoute
+  '/admin/cursos': typeof AuthenticatedAdminCursosRoute
+  '/curso/$slug': typeof AuthenticatedCursoSlugRouteWithChildren
+  '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/curso/$slug/aula/$lessonId': typeof AuthenticatedCursoSlugAulaLessonIdRoute
+  '/curso/$slug/meta/$goalId': typeof AuthenticatedCursoSlugMetaGoalIdRoute
+  '/curso/$slug/simulado/$examId': typeof AuthenticatedCursoSlugSimuladoExamIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
+  '/progresso': typeof AuthenticatedProgressoRoute
+  '/admin/alunos': typeof AuthenticatedAdminAlunosRoute
+  '/admin/cursos': typeof AuthenticatedAdminCursosRoute
+  '/curso/$slug': typeof AuthenticatedCursoSlugRouteWithChildren
+  '/admin': typeof AuthenticatedAdminIndexRoute
+  '/curso/$slug/aula/$lessonId': typeof AuthenticatedCursoSlugAulaLessonIdRoute
+  '/curso/$slug/meta/$goalId': typeof AuthenticatedCursoSlugMetaGoalIdRoute
+  '/curso/$slug/simulado/$examId': typeof AuthenticatedCursoSlugSimuladoExamIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/_authenticated/progresso': typeof AuthenticatedProgressoRoute
+  '/_authenticated/admin/alunos': typeof AuthenticatedAdminAlunosRoute
+  '/_authenticated/admin/cursos': typeof AuthenticatedAdminCursosRoute
+  '/_authenticated/curso/$slug': typeof AuthenticatedCursoSlugRouteWithChildren
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/curso/$slug/aula/$lessonId': typeof AuthenticatedCursoSlugAulaLessonIdRoute
+  '/_authenticated/curso/$slug/meta/$goalId': typeof AuthenticatedCursoSlugMetaGoalIdRoute
+  '/_authenticated/curso/$slug/simulado/$examId': typeof AuthenticatedCursoSlugSimuladoExamIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/admin'
+    | '/dashboard'
+    | '/perfil'
+    | '/progresso'
+    | '/admin/alunos'
+    | '/admin/cursos'
+    | '/curso/$slug'
+    | '/admin/'
+    | '/curso/$slug/aula/$lessonId'
+    | '/curso/$slug/meta/$goalId'
+    | '/curso/$slug/simulado/$examId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/dashboard'
+    | '/perfil'
+    | '/progresso'
+    | '/admin/alunos'
+    | '/admin/cursos'
+    | '/curso/$slug'
+    | '/admin'
+    | '/curso/$slug/aula/$lessonId'
+    | '/curso/$slug/meta/$goalId'
+    | '/curso/$slug/simulado/$examId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/reset-password'
+    | '/_authenticated/admin'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/perfil'
+    | '/_authenticated/progresso'
+    | '/_authenticated/admin/alunos'
+    | '/_authenticated/admin/cursos'
+    | '/_authenticated/curso/$slug'
+    | '/_authenticated/admin/'
+    | '/_authenticated/curso/$slug/aula/$lessonId'
+    | '/_authenticated/curso/$slug/meta/$goalId'
+    | '/_authenticated/curso/$slug/simulado/$examId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,12 +242,160 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/progresso': {
+      id: '/_authenticated/progresso'
+      path: '/progresso'
+      fullPath: '/progresso'
+      preLoaderRoute: typeof AuthenticatedProgressoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/perfil': {
+      id: '/_authenticated/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AuthenticatedPerfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/curso/$slug': {
+      id: '/_authenticated/curso/$slug'
+      path: '/curso/$slug'
+      fullPath: '/curso/$slug'
+      preLoaderRoute: typeof AuthenticatedCursoSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/cursos': {
+      id: '/_authenticated/admin/cursos'
+      path: '/cursos'
+      fullPath: '/admin/cursos'
+      preLoaderRoute: typeof AuthenticatedAdminCursosRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/admin/alunos': {
+      id: '/_authenticated/admin/alunos'
+      path: '/alunos'
+      fullPath: '/admin/alunos'
+      preLoaderRoute: typeof AuthenticatedAdminAlunosRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/curso/$slug/simulado/$examId': {
+      id: '/_authenticated/curso/$slug/simulado/$examId'
+      path: '/simulado/$examId'
+      fullPath: '/curso/$slug/simulado/$examId'
+      preLoaderRoute: typeof AuthenticatedCursoSlugSimuladoExamIdRouteImport
+      parentRoute: typeof AuthenticatedCursoSlugRoute
+    }
+    '/_authenticated/curso/$slug/meta/$goalId': {
+      id: '/_authenticated/curso/$slug/meta/$goalId'
+      path: '/meta/$goalId'
+      fullPath: '/curso/$slug/meta/$goalId'
+      preLoaderRoute: typeof AuthenticatedCursoSlugMetaGoalIdRouteImport
+      parentRoute: typeof AuthenticatedCursoSlugRoute
+    }
+    '/_authenticated/curso/$slug/aula/$lessonId': {
+      id: '/_authenticated/curso/$slug/aula/$lessonId'
+      path: '/aula/$lessonId'
+      fullPath: '/curso/$slug/aula/$lessonId'
+      preLoaderRoute: typeof AuthenticatedCursoSlugAulaLessonIdRouteImport
+      parentRoute: typeof AuthenticatedCursoSlugRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminAlunosRoute: typeof AuthenticatedAdminAlunosRoute
+  AuthenticatedAdminCursosRoute: typeof AuthenticatedAdminCursosRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
+  {
+    AuthenticatedAdminAlunosRoute: AuthenticatedAdminAlunosRoute,
+    AuthenticatedAdminCursosRoute: AuthenticatedAdminCursosRoute,
+    AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  }
+
+const AuthenticatedAdminRouteRouteWithChildren =
+  AuthenticatedAdminRouteRoute._addFileChildren(
+    AuthenticatedAdminRouteRouteChildren,
+  )
+
+interface AuthenticatedCursoSlugRouteChildren {
+  AuthenticatedCursoSlugAulaLessonIdRoute: typeof AuthenticatedCursoSlugAulaLessonIdRoute
+  AuthenticatedCursoSlugMetaGoalIdRoute: typeof AuthenticatedCursoSlugMetaGoalIdRoute
+  AuthenticatedCursoSlugSimuladoExamIdRoute: typeof AuthenticatedCursoSlugSimuladoExamIdRoute
+}
+
+const AuthenticatedCursoSlugRouteChildren: AuthenticatedCursoSlugRouteChildren =
+  {
+    AuthenticatedCursoSlugAulaLessonIdRoute:
+      AuthenticatedCursoSlugAulaLessonIdRoute,
+    AuthenticatedCursoSlugMetaGoalIdRoute:
+      AuthenticatedCursoSlugMetaGoalIdRoute,
+    AuthenticatedCursoSlugSimuladoExamIdRoute:
+      AuthenticatedCursoSlugSimuladoExamIdRoute,
+  }
+
+const AuthenticatedCursoSlugRouteWithChildren =
+  AuthenticatedCursoSlugRoute._addFileChildren(
+    AuthenticatedCursoSlugRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
+  AuthenticatedProgressoRoute: typeof AuthenticatedProgressoRoute
+  AuthenticatedCursoSlugRoute: typeof AuthenticatedCursoSlugRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
+  AuthenticatedProgressoRoute: AuthenticatedProgressoRoute,
+  AuthenticatedCursoSlugRoute: AuthenticatedCursoSlugRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
