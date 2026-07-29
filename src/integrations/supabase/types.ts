@@ -206,6 +206,7 @@ export type Database = {
           sort_order: number
           title: string
           updated_at: string
+          video_file_path: string
           video_url: string
         }
         Insert: {
@@ -218,6 +219,7 @@ export type Database = {
           sort_order?: number
           title: string
           updated_at?: string
+          video_file_path?: string
           video_url?: string
         }
         Update: {
@@ -230,6 +232,7 @@ export type Database = {
           sort_order?: number
           title?: string
           updated_at?: string
+          video_file_path?: string
           video_url?: string
         }
         Relationships: [
@@ -279,40 +282,49 @@ export type Database = {
       }
       mock_exams: {
         Row: {
+          answer_key_path: string
           answer_key_url: string
           correction_url: string
+          correction_video_url: string
           course_id: string
           created_at: string
           description: string
           external_url: string
           id: string
           number: number
+          pdf_path: string
           release_offset_days: number
           sort_order: number
           title: string
         }
         Insert: {
+          answer_key_path?: string
           answer_key_url?: string
           correction_url?: string
+          correction_video_url?: string
           course_id: string
           created_at?: string
           description?: string
           external_url?: string
           id?: string
           number: number
+          pdf_path?: string
           release_offset_days?: number
           sort_order?: number
           title: string
         }
         Update: {
+          answer_key_path?: string
           answer_key_url?: string
           correction_url?: string
+          correction_video_url?: string
           course_id?: string
           created_at?: string
           description?: string
           external_url?: string
           id?: string
           number?: number
+          pdf_path?: string
           release_offset_days?: number
           sort_order?: number
           title?: string
@@ -354,6 +366,93 @@ export type Database = {
         }
         Relationships: []
       }
+      question_answers: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          id: string
+          is_correct: boolean
+          question_id: string
+          selected_option_id: string | null
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          question_id: string
+          selected_option_id?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          question_id?: string
+          selected_option_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "question_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_answers_selected_option_id_fkey"
+            columns: ["selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "question_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_attempts: {
+        Row: {
+          correct_count: number
+          created_at: string
+          finished_at: string | null
+          goal_id: string
+          id: string
+          total: number
+          user_id: string
+        }
+        Insert: {
+          correct_count?: number
+          created_at?: string
+          finished_at?: string | null
+          goal_id: string
+          id?: string
+          total?: number
+          user_id: string
+        }
+        Update: {
+          correct_count?: number
+          created_at?: string
+          finished_at?: string | null
+          goal_id?: string
+          id?: string
+          total?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_attempts_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "question_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_goals: {
         Row: {
           created_at: string
@@ -361,9 +460,11 @@ export type Database = {
           description: string
           external_url: string
           id: string
+          pdf_path: string
           question_count: number
           release_offset_days: number
           sort_order: number
+          subject: string
           title: string
         }
         Insert: {
@@ -372,9 +473,11 @@ export type Database = {
           description?: string
           external_url?: string
           id?: string
+          pdf_path?: string
           question_count?: number
           release_offset_days?: number
           sort_order?: number
+          subject?: string
           title: string
         }
         Update: {
@@ -383,9 +486,11 @@ export type Database = {
           description?: string
           external_url?: string
           id?: string
+          pdf_path?: string
           question_count?: number
           release_offset_days?: number
           sort_order?: number
+          subject?: string
           title?: string
         }
         Relationships: [
@@ -394,6 +499,85 @@ export type Database = {
             columns: ["cycle_id"]
             isOneToOne: false
             referencedRelation: "cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_options: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_correct: boolean
+          label: string
+          order_index: number
+          question_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          label: string
+          order_index?: number
+          question_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          label?: string
+          order_index?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questions: {
+        Row: {
+          created_at: string
+          explanation: string
+          goal_id: string
+          id: string
+          is_published: boolean
+          order_index: number
+          statement: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          explanation?: string
+          goal_id: string
+          id?: string
+          is_published?: boolean
+          order_index?: number
+          statement: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          explanation?: string
+          goal_id?: string
+          id?: string
+          is_published?: boolean
+          order_index?: number
+          statement?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "question_goals"
             referencedColumns: ["id"]
           },
         ]
