@@ -79,6 +79,20 @@ function ExamPage() {
               Link ainda não configurado pelo administrador.
             </div>
           )}
+          {exam.correction_url && (
+            <Button asChild variant="outline">
+              <a href={exam.correction_url} target="_blank" rel="noreferrer">
+                Correção do Simulado <ExternalLink className="ml-1 h-4 w-4" />
+              </a>
+            </Button>
+          )}
+          {exam.answer_key_url && (
+            <Button asChild variant="outline">
+              <a href={exam.answer_key_url} target="_blank" rel="noreferrer">
+                Gabarito do Simulado <ExternalLink className="ml-1 h-4 w-4" />
+              </a>
+            </Button>
+          )}
           <Button
             onClick={() => complete.mutate(!done)}
             disabled={complete.isPending}
