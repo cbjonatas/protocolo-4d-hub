@@ -7,8 +7,8 @@ export function computeStatus(
   enrolledAt: string | undefined,
   completed: boolean,
 ): { status: Status; releaseDate: Date | null } {
-  if (!enrolledAt) return { status: "locked", releaseDate: null };
-  const release = new Date(new Date(enrolledAt).getTime() + releaseOffsetDays * 86400_000);
+  const baseTime = enrolledAt ? new Date(enrolledAt).getTime() : Date.now();
+  const release = new Date(baseTime + releaseOffsetDays * 86400_000);
   const now = new Date();
   if (completed) return { status: "completed", releaseDate: release };
   if (release > now) return { status: "locked", releaseDate: release };
