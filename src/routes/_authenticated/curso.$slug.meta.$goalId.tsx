@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { fetchFullCourse, computeStatus, formatReleaseDate } from "@/lib/course-data";
+import { fetchFullCourse, DEFAULT_GOALS, computeStatus, formatReleaseDate } from "@/lib/course-data";
 import { PdfViewer } from "@/components/pdf-viewer";
 
 export const Route = createFileRoute("/_authenticated/curso/$slug/meta/$goalId")({
@@ -44,6 +44,74 @@ type Question = {
   }[];
 };
 
+const DEFAULT_QUESTIONS: Question[] = [
+  {
+    id: "q1",
+    statement: "Questão 01 — Qual das alternativas indica a principal função da memória RAM em um computador?",
+    explanation:
+      "Gabarito Comentado: A memória RAM armazena temporariamente os dados que o processador está executando no momento. Por ser volátil, seu conteúdo é apagado ao desligar o computador.",
+    order_index: 0,
+    options: [
+      {
+        id: "opt1",
+        label: "A",
+        content: "Armazenar dados temporários em execução de forma volátil.",
+        is_correct: true,
+        order_index: 0,
+      },
+      {
+        id: "opt2",
+        label: "B",
+        content: "Salvar arquivos permanentemente no disco rígido.",
+        is_correct: false,
+        order_index: 1,
+      },
+      {
+        id: "opt3",
+        label: "C",
+        content: "Processar instruções lógicas e aritméticas.",
+        is_correct: false,
+        order_index: 2,
+      },
+      {
+        id: "opt4",
+        label: "D",
+        content: "Gerenciar as conexões de rede de banda larga.",
+        is_correct: false,
+        order_index: 3,
+      },
+    ],
+  },
+  {
+    id: "q2",
+    statement:
+      "Questão 02 — No sistema operacional Windows 11, qual o atalho padrão para abrir o Gerenciador de Tarefas diretamente?",
+    explanation:
+      "Gabarito Comentado: O atalho Ctrl + Shift + Esc abre diretamente o Gerenciador de Tarefas sem passar pela tela de segurança Ctrl + Alt + Del.",
+    order_index: 1,
+    options: [
+      { id: "opt21", label: "A", content: "Ctrl + Shift + Esc", is_correct: true, order_index: 0 },
+      { id: "opt22", label: "B", content: "Ctrl + Alt + Del", is_correct: false, order_index: 1 },
+      { id: "opt23", label: "C", content: "Windows + Tab", is_correct: false, order_index: 2 },
+      { id: "opt24", label: "D", content: "Alt + F4", is_correct: false, order_index: 3 },
+    ],
+  },
+  {
+    id: "q3",
+    statement:
+      "Questão 03 — Qual protocolo de camada de aplicação é responsável por transferir páginas de hipertexto de forma segura utilizando criptografia TLS/SSL?",
+    explanation:
+      "Gabarito Comentado: O HTTPS (HyperText Transfer Protocol Secure) utiliza a porta 443 com criptografia TLS/SSL para comunicação segura na web.",
+    order_index: 2,
+    options: [
+      { id: "opt31", label: "A", content: "HTTPS", is_correct: true, order_index: 0 },
+      { id: "opt32", label: "B", content: "HTTP", is_correct: false, order_index: 1 },
+      { id: "opt33", label: "C", content: "FTP", is_correct: false, order_index: 2 },
+      { id: "opt34", label: "D", content: "SMTP", is_correct: false, order_index: 3 },
+    ],
+  },
+];
+
 async function fetchGoalQuestions(goalId: string): Promise<Question[]> {
   const { data: qs } = await supabase
     .from("questions")
@@ -53,7 +121,12 @@ async function fetchGoalQuestions(goalId: string): Promise<Question[]> {
     .eq("goal_id", goalId)
     .eq("is_published", true)
     .order("order_index");
-  return (qs ?? []).map((q: any) => ({
+
+  if (!qs || qs.length === 0) {
+    return DEFAULT_QUESTIONS;
+  }
+
+  return qs.map((q: any) => ({
     id: q.id,
     statement: q.statement,
     explanation: q.explanation,
@@ -74,8 +147,14 @@ function GoalPage() {
   });
   const { data: goal } = useQuery({
     queryKey: ["goal", goalId],
-    queryFn: async () =>
-      (await supabase.from("question_goals").select("*").eq("id", goalId).maybeSingle()).data,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("question_goals")
+        .select("*")
+        .eq("id", goalId)
+        .maybeSingle();
+      return data ?? DEFAULT_GOALS.find((g) => g.id === goalId) ?? DEFAULT_GOALS[0];
+    },
   });
   const { data: questions, isLoading: qLoading } = useQuery({
     queryKey: ["goal-questions", goalId],

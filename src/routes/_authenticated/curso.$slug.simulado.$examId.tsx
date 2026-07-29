@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { fetchFullCourse, computeStatus, formatReleaseDate } from "@/lib/course-data";
+import { fetchFullCourse, DEFAULT_EXAMS, computeStatus, formatReleaseDate } from "@/lib/course-data";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { VideoPlayer } from "@/components/video-player";
 
@@ -37,8 +37,10 @@ function ExamPage() {
   });
   const { data: exam } = useQuery({
     queryKey: ["exam", examId],
-    queryFn: async () =>
-      (await supabase.from("mock_exams").select("*").eq("id", examId).maybeSingle()).data,
+    queryFn: async () => {
+      const { data } = await supabase.from("mock_exams").select("*").eq("id", examId).maybeSingle();
+      return data ?? DEFAULT_EXAMS.find((e) => e.id === examId) ?? DEFAULT_EXAMS[0];
+    },
   });
 
   const complete = useMutation({

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { fetchFullCourse, computeStatus, formatReleaseDate } from "@/lib/course-data";
+import { fetchFullCourse, DEFAULT_LESSONS, computeStatus, formatReleaseDate } from "@/lib/course-data";
 import { VideoPlayer } from "@/components/video-player";
 import { PdfViewer } from "@/components/pdf-viewer";
 
@@ -22,7 +22,8 @@ async function fetchLesson(lessonId: string) {
     supabase.from("lessons").select("*").eq("id", lessonId).maybeSingle(),
     supabase.from("materials").select("*").eq("lesson_id", lessonId).order("sort_order"),
   ]);
-  return { lesson, materials: materials ?? [] };
+  const activeLesson = lesson ?? DEFAULT_LESSONS.find((l) => l.id === lessonId) ?? DEFAULT_LESSONS[0];
+  return { lesson: activeLesson, materials: materials ?? [] };
 }
 
 function LessonPage() {
