@@ -1,0 +1,3 @@
+ALTER TABLE public.mock_exams
+  ADD COLUMN IF NOT EXISTS correction_url TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS answer_key_url TEXT NOT NULL DEFAULT '';

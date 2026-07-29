@@ -279,6 +279,8 @@ export type Database = {
       }
       mock_exams: {
         Row: {
+          answer_key_url: string
+          correction_url: string
           course_id: string
           created_at: string
           description: string
@@ -290,6 +292,8 @@ export type Database = {
           title: string
         }
         Insert: {
+          answer_key_url?: string
+          correction_url?: string
           course_id: string
           created_at?: string
           description?: string
@@ -301,6 +305,8 @@ export type Database = {
           title: string
         }
         Update: {
+          answer_key_url?: string
+          correction_url?: string
           course_id?: string
           created_at?: string
           description?: string
