@@ -6,26 +6,42 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchFullCourse } from "@/lib/course-data";
 
 export const Route = createFileRoute("/_authenticated/progresso")({
-  head: () => ({ meta: [{ title: "Meu Progresso — Informática com Jhon" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Meu Progresso — Informática com Jhon" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: ProgressPage,
 });
 
 async function fetchQuizStats() {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return { attempts: 0, answered: 0, correct: 0 };
-  const { data } = await supabase.from("question_attempts").select("total, correct_count").eq("user_id", u.user.id);
+  const { data } = await supabase
+    .from("question_attempts")
+    .select("total, correct_count")
+    .eq("user_id", u.user.id);
   const answered = (data ?? []).reduce((s, r) => s + (r.total ?? 0), 0);
   const correct = (data ?? []).reduce((s, r) => s + (r.correct_count ?? 0), 0);
   return { attempts: data?.length ?? 0, answered, correct };
 }
 
 function ProgressPage() {
-  const { data } = useQuery({ queryKey: ["course-full", "protocolo-4d"], queryFn: () => fetchFullCourse("protocolo-4d") });
+  const { data } = useQuery({
+    queryKey: ["course-full", "protocolo-4d"],
+    queryFn: () => fetchFullCourse("protocolo-4d"),
+  });
   const { data: quiz } = useQuery({ queryKey: ["quiz-stats"], queryFn: fetchQuizStats });
-  if (!data) return <div className="container mx-auto px-4 py-10 text-muted-foreground">Carregando...</div>;
+  if (!data)
+    return <div className="container mx-auto px-4 py-10 text-muted-foreground">Carregando...</div>;
 
-  const lTotal = data.lessons.length, gTotal = data.goals.length, eTotal = data.exams.length;
-  const lDone = data.lessonProgress.size, gDone = data.goalProgress.size, eDone = data.examProgress.size;
+  const lTotal = data.lessons.length,
+    gTotal = data.goals.length,
+    eTotal = data.exams.length;
+  const lDone = data.lessonProgress.size,
+    gDone = data.goalProgress.size,
+    eDone = data.examProgress.size;
   const total = lTotal + gTotal + eTotal;
   const done = lDone + gDone + eDone;
   const percent = total ? Math.round((done / total) * 100) : 0;
@@ -46,7 +62,9 @@ function ProgressPage() {
             <Trophy className="h-7 w-7 text-gold-foreground" />
           </div>
           <div className="flex-1">
-            <div className="text-xs font-semibold uppercase tracking-widest text-gold">Protocolo 4D</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-gold">
+              Protocolo 4D
+            </div>
             <h2 className="font-display text-xl font-bold">{percent}% concluído</h2>
           </div>
         </div>
@@ -62,7 +80,12 @@ function ProgressPage() {
       <h2 className="mt-10 font-display text-2xl font-bold">Desempenho em questões</h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-4">
         <MiniStat icon={Target} label="Respondidas" value={answered} />
-        <MiniStat icon={CheckCircle2} label="Acertos" value={correct} className="text-emerald-400" />
+        <MiniStat
+          icon={CheckCircle2}
+          label="Acertos"
+          value={correct}
+          className="text-emerald-400"
+        />
         <MiniStat icon={XCircle} label="Erros" value={errors} className="text-rose-400" />
         <MiniStat icon={Percent} label="Aproveitamento" value={`${acc}%`} className="text-gold" />
       </div>
@@ -74,15 +97,20 @@ function ProgressPage() {
           const cGoals = data.goals.filter((g) => g.cycle_id === c.id);
           const cExams = data.exams.filter((e) => e.number === c.number);
           const cT = cLessons.length + cGoals.length + cExams.length;
-          const cD = cLessons.filter((l) => data.lessonProgress.has(l.id)).length
-            + cGoals.filter((g) => data.goalProgress.has(g.id)).length
-            + cExams.filter((e) => data.examProgress.has(e.id)).length;
+          const cD =
+            cLessons.filter((l) => data.lessonProgress.has(l.id)).length +
+            cGoals.filter((g) => data.goalProgress.has(g.id)).length +
+            cExams.filter((e) => data.examProgress.has(e.id)).length;
           const p = cT ? Math.round((cD / cT) * 100) : 0;
           return (
             <div key={c.id} className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center justify-between">
-                <div className="font-semibold">Ciclo {c.number} — {c.title}</div>
-                <div className="text-sm text-muted-foreground">{cD}/{cT} · {p}%</div>
+                <div className="font-semibold">
+                  Ciclo {c.number} — {c.title}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {cD}/{cT} · {p}%
+                </div>
               </div>
               <Progress value={p} className="mt-2 h-2" />
             </div>
@@ -93,21 +121,49 @@ function ProgressPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, done, total }: { icon: any; label: string; done: number; total: number }) {
+function StatCard({
+  icon: Icon,
+  label,
+  done,
+  total,
+}: {
+  icon: any;
+  label: string;
+  done: number;
+  total: number;
+}) {
   const pct = total ? Math.round((done / total) * 100) : 0;
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-elegant">
-      <div className="flex items-center gap-2 text-muted-foreground"><Icon className="h-4 w-4" /> {label}</div>
-      <div className="mt-2 font-display text-3xl font-bold">{done}<span className="text-lg text-muted-foreground">/{total}</span></div>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="h-4 w-4" /> {label}
+      </div>
+      <div className="mt-2 font-display text-3xl font-bold">
+        {done}
+        <span className="text-lg text-muted-foreground">/{total}</span>
+      </div>
       <Progress value={pct} className="mt-3 h-2" />
     </div>
   );
 }
 
-function MiniStat({ icon: Icon, label, value, className }: { icon: any; label: string; value: React.ReactNode; className?: string }) {
+function MiniStat({
+  icon: Icon,
+  label,
+  value,
+  className,
+}: {
+  icon: any;
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4" />{label}</div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Icon className="h-4 w-4" />
+        {label}
+      </div>
       <div className={`mt-1 font-display text-2xl font-bold ${className ?? ""}`}>{value}</div>
     </div>
   );

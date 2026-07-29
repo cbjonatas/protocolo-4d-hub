@@ -28,7 +28,9 @@ export const generateQuestionsFromPdf = createServerFn({ method: "POST" })
     if (!goal.pdf_path) throw new Error("Envie um PDF-base antes de gerar as questões.");
 
     // Download PDF from storage
-    const { data: file, error: fileErr } = await supabase.storage.from("course-materials").download(goal.pdf_path);
+    const { data: file, error: fileErr } = await supabase.storage
+      .from("course-materials")
+      .download(goal.pdf_path);
     if (fileErr || !file) throw new Error("Não foi possível ler o PDF-base.");
     const buf = await file.arrayBuffer();
     const base64 = Buffer.from(buf).toString("base64");
@@ -43,7 +45,7 @@ export const generateQuestionsFromPdf = createServerFn({ method: "POST" })
         {
           role: "system",
           content:
-            "Você é um elaborador de questões de concurso público em português do Brasil. Gere questões objetivas de múltipla escolha (5 alternativas: A, B, C, D, E) baseadas EXCLUSIVAMENTE no conteúdo do PDF fornecido. Cada questão deve ter APENAS UMA alternativa correta e uma breve explicação. Responda SOMENTE com JSON válido no formato: {\"questions\":[{\"statement\":\"...\",\"options\":[{\"label\":\"A\",\"content\":\"...\",\"is_correct\":false},...],\"explanation\":\"...\"}]}",
+            'Você é um elaborador de questões de concurso público em português do Brasil. Gere questões objetivas de múltipla escolha (5 alternativas: A, B, C, D, E) baseadas EXCLUSIVAMENTE no conteúdo do PDF fornecido. Cada questão deve ter APENAS UMA alternativa correta e uma breve explicação. Responda SOMENTE com JSON válido no formato: {"questions":[{"statement":"...","options":[{"label":"A","content":"...","is_correct":false},...],"explanation":"..."}]}',
         },
         {
           role: "user",
@@ -73,8 +75,10 @@ export const generateQuestionsFromPdf = createServerFn({ method: "POST" })
 
     if (!res.ok) {
       const text = await res.text();
-      if (res.status === 429) throw new Error("Limite de requisições atingido. Tente novamente em instantes.");
-      if (res.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
+      if (res.status === 429)
+        throw new Error("Limite de requisições atingido. Tente novamente em instantes.");
+      if (res.status === 402)
+        throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
       throw new Error(`Falha na IA (${res.status}): ${text.slice(0, 200)}`);
     }
 
@@ -82,7 +86,9 @@ export const generateQuestionsFromPdf = createServerFn({ method: "POST" })
     const raw = json?.choices?.[0]?.message?.content ?? "";
     let parsed: any;
     try {
-      const cleaned = String(raw).replace(/^```json\s*|\s*```$/g, "").trim();
+      const cleaned = String(raw)
+        .replace(/^```json\s*|\s*```$/g, "")
+        .trim();
       parsed = JSON.parse(cleaned);
     } catch {
       throw new Error("A IA retornou um formato inválido. Tente novamente.");
@@ -126,7 +132,9 @@ export const generateQuestionsFromPdf = createServerFn({ method: "POST" })
 
 export const publishGoalQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ goalId: z.string().uuid(), publish: z.boolean() }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ goalId: z.string().uuid(), publish: z.boolean() }).parse(input),
+  )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { error } = await context.supabase
@@ -140,6 +148,9 @@ export const publishGoalQuestions = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("goal_id", data.goalId)
       .eq("is_published", true);
-    await context.supabase.from("question_goals").update({ question_count: count ?? 0 }).eq("id", data.goalId);
+    await context.supabase
+      .from("question_goals")
+      .update({ question_count: count ?? 0 })
+      .eq("id", data.goalId);
     return { ok: true };
   });

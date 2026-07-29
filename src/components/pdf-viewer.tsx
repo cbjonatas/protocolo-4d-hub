@@ -3,21 +3,78 @@ import { Download, ExternalLink, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
-export function PdfViewer({ filePath, title, allowDownload = true }: { filePath: string; title?: string; allowDownload?: boolean }) {
+export function PdfViewer({
+  filePath,
+  title,
+  allowDownload = true,
+}: {
+  filePath: string;
+  title?: string;
+  allowDownload?: boolean;
+}) {
   const [url, setUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancel = false;
-    (async () => {
+    async function loadPdfUrl() {
       setLoading(true);
-      const { data } = await supabase.storage.from("course-materials").createSignedUrl(filePath, 3600);
-      if (!cancel) {
-        setUrl(data?.signedUrl ?? "");
+      setError(false);
+
+      if (!filePath) {
         setLoading(false);
+        setError(true);
+        return;
       }
-    })();
-    return () => { cancel = true; };
+
+      if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+        if (!cancel) {
+          setUrl(filePath);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const { data } = await supabase.storage
+          .from("course-materials")
+          .createSignedUrl(filePath, 3600);
+
+        if (!cancel) {
+          if (data?.signedUrl) {
+            setUrl(data.signedUrl);
+          } else {
+            const { data: pubData } = supabase.storage
+              .from("course-materials")
+              .getPublicUrl(filePath);
+            if (pubData?.publicUrl) {
+              setUrl(pubData.publicUrl);
+            } else {
+              setError(true);
+            }
+          }
+        }
+      } catch {
+        if (!cancel) {
+          const { data: pubData } = supabase.storage
+            .from("course-materials")
+            .getPublicUrl(filePath);
+          if (pubData?.publicUrl) {
+            setUrl(pubData.publicUrl);
+          } else {
+            setError(true);
+          }
+        }
+      } finally {
+        if (!cancel) setLoading(false);
+      }
+    }
+
+    loadPdfUrl();
+    return () => {
+      cancel = true;
+    };
   }, [filePath]);
 
   if (loading) {
@@ -28,10 +85,13 @@ export function PdfViewer({ filePath, title, allowDownload = true }: { filePath:
     );
   }
 
-  if (!url) {
+  if (error || !url) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
-        Não foi possível carregar o PDF.
+      <div className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+        <p>Não foi possível carregar o arquivo PDF.</p>
+        <p className="mt-1 text-xs text-muted-foreground font-mono">
+          {filePath || "Caminho não informado"}
+        </p>
       </div>
     );
   }
@@ -43,11 +103,15 @@ export function PdfViewer({ filePath, title, allowDownload = true }: { filePath:
       </div>
       <div className="flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm">
-          <a href={url} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 h-4 w-4" /> Abrir em nova aba</a>
+          <a href={url} target="_blank" rel="noreferrer">
+            <ExternalLink className="mr-1 h-4 w-4" /> Abrir em nova aba
+          </a>
         </Button>
         {allowDownload && (
           <Button asChild size="sm" className="bg-gradient-primary shadow-glow">
-            <a href={url} download><Download className="mr-1 h-4 w-4" /> Baixar</a>
+            <a href={url} download target="_blank" rel="noreferrer">
+              <Download className="mr-1 h-4 w-4" /> Baixar
+            </a>
           </Button>
         )}
       </div>
