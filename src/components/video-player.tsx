@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Play } from "lucide-react";
 
 type EmbedResult =
   | { type: "direct"; url: string }
@@ -26,7 +27,7 @@ function parseVideoUrl(url?: string): EmbedResult {
     };
   }
 
-  // YouTube format 2: fallback for any 11-character video ID in v= query string
+  // YouTube format 2: fallback for any 11-character video ID in v= query string or path
   const ytAny = cleaned.match(/(?:v=|v\/|\/v\/)([\w-]{11})/);
   if (ytAny && ytAny[1]) {
     return {
@@ -53,7 +54,7 @@ function parseVideoUrl(url?: string): EmbedResult {
     return { type: "iframe", url: `https://www.loom.com/embed/${loom[1]}` };
   }
 
-  // Fallback for custom embedded players or URLs
+  // Fallback for custom embedded players
   return { type: "iframe", url: cleaned };
 }
 
@@ -66,15 +67,17 @@ type Props = {
 
 export function VideoPlayer({ videoUrl, videoFilePath, title, onProgress }: Props) {
   const [signedUrl, setSignedUrl] = useState<string>("");
-  const [errorLoadingFile, setErrorLoadingFile] = useState(false);
+  const [fileError, setFileError] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const notifiedRef = useRef(false);
 
   useEffect(() => {
     let cancel = false;
-    async function loadSigned() {
+    async function loadVideoFile() {
+      setFileError(false);
+      setSignedUrl("");
+
       if (!videoFilePath || !videoFilePath.trim()) {
-        setSignedUrl("");
         return;
       }
 
@@ -84,39 +87,31 @@ export function VideoPlayer({ videoUrl, videoFilePath, title, onProgress }: Prop
       }
 
       try {
-        const { data } = await supabase.storage
+        const { data, error } = await supabase.storage
           .from("course-materials")
           .createSignedUrl(videoFilePath, 3600);
+
         if (!cancel) {
-          if (data?.signedUrl) {
+          if (data?.signedUrl && !error) {
             setSignedUrl(data.signedUrl);
           } else {
-            const { data: pubData } = supabase.storage
-              .from("course-materials")
-              .getPublicUrl(videoFilePath);
-            if (pubData?.publicUrl) setSignedUrl(pubData.publicUrl);
-            else setErrorLoadingFile(true);
+            setFileError(true);
           }
         }
       } catch {
-        if (!cancel) {
-          const { data: pubData } = supabase.storage
-            .from("course-materials")
-            .getPublicUrl(videoFilePath);
-          if (pubData?.publicUrl) setSignedUrl(pubData.publicUrl);
-          else setErrorLoadingFile(true);
-        }
+        if (!cancel) setFileError(true);
       }
     }
-    loadSigned();
+
+    loadVideoFile();
     return () => {
       cancel = true;
     };
   }, [videoFilePath]);
 
-  const hasFile = !!videoFilePath && videoFilePath.trim() !== "" && !errorLoadingFile;
+  const hasValidFile = !!videoFilePath && videoFilePath.trim() !== "" && !fileError && !!signedUrl;
 
-  if (hasFile && signedUrl) {
+  if (hasValidFile) {
     return (
       <div className="overflow-hidden rounded-2xl border border-border bg-black shadow-elegant">
         <video
@@ -126,7 +121,7 @@ export function VideoPlayer({ videoUrl, videoFilePath, title, onProgress }: Prop
           controlsList="nodownload"
           playsInline
           className="aspect-video w-full"
-          onError={() => setErrorLoadingFile(true)}
+          onError={() => setFileError(true)}
           onTimeUpdate={(e) => {
             const v = e.currentTarget;
             if (!v.duration) return;
@@ -173,7 +168,7 @@ export function VideoPlayer({ videoUrl, videoFilePath, title, onProgress }: Prop
         <div className="aspect-video">
           <iframe
             src={embed.url}
-            title={title ?? "Vídeo"}
+            title={title ?? "Vídeo da Aula"}
             className="h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
@@ -184,9 +179,17 @@ export function VideoPlayer({ videoUrl, videoFilePath, title, onProgress }: Prop
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-black shadow-elegant">
-      <div className="flex aspect-video items-center justify-center p-6 text-center text-sm text-muted-foreground">
-        Nenhum vídeo configurado para esta aula. Acesse o Painel do Administrador para cadastrar a URL ou arquivo de vídeo.
+    <div className="overflow-hidden rounded-2xl border border-border bg-gradient-hero shadow-elegant">
+      <div className="flex aspect-video flex-col items-center justify-center p-6 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gold/20 text-gold mb-3 shadow-glow">
+          <Play className="h-7 w-7 fill-current ml-0.5" />
+        </div>
+        <p className="font-display text-lg font-bold text-foreground">
+          Vídeo ainda não configurado para esta aula
+        </p>
+        <p className="mt-1 max-w-md text-xs text-muted-foreground">
+          Acesse o Painel do Administrador (<code className="text-gold">/admin/cursos</code>) para cadastrar o link do YouTube/Vimeo ou fazer upload do arquivo de vídeo.
+        </p>
       </div>
     </div>
   );
