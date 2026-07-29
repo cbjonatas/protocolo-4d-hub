@@ -1,17 +1,60 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-function toEmbedUrl(url: string) {
-  if (!url) return "";
-  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]+)/);
-  if (yt) return `https://www.youtube.com/embed/${yt[1]}?rel=0&modestbranding=1`;
-  const vim = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-  if (vim) return `https://player.vimeo.com/video/${vim[1]}`;
-  const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
-  if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
-  const loom = url.match(/loom\.com\/(?:share|embed)\/([\w-]+)/);
-  if (loom) return `https://www.loom.com/embed/${loom[1]}`;
-  return url;
+type EmbedResult =
+  | { type: "direct"; url: string }
+  | { type: "iframe"; url: string }
+  | { type: "none"; url: "" };
+
+function parseVideoUrl(url?: string): EmbedResult {
+  if (!url || !url.trim()) return { type: "none", url: "" };
+  const cleaned = url.trim();
+
+  // Direct MP4 / WEBM / MOV video file URL
+  if (/\.(mp4|webm|m4v|mov)(\?.*)?$/i.test(cleaned)) {
+    return { type: "direct", url: cleaned };
+  }
+
+  // YouTube format 1: watch?v=ID, youtu.be/ID, embed/ID, shorts/ID, live/ID
+  const ytMatch = cleaned.match(
+    /(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/,
+  );
+  if (ytMatch && ytMatch[1]) {
+    return {
+      type: "iframe",
+      url: `https://www.youtube.com/embed/${ytMatch[1]}?rel=0&modestbranding=1&autoplay=0`,
+    };
+  }
+
+  // YouTube format 2: fallback for any 11-character video ID in v= query string
+  const ytAny = cleaned.match(/(?:v=|v\/|\/v\/)([\w-]{11})/);
+  if (ytAny && ytAny[1]) {
+    return {
+      type: "iframe",
+      url: `https://www.youtube.com/embed/${ytAny[1]}?rel=0&modestbranding=1&autoplay=0`,
+    };
+  }
+
+  // Vimeo
+  const vim = cleaned.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vim && vim[1]) {
+    return { type: "iframe", url: `https://player.vimeo.com/video/${vim[1]}` };
+  }
+
+  // Google Drive
+  const drive = cleaned.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (drive && drive[1]) {
+    return { type: "iframe", url: `https://drive.google.com/file/d/${drive[1]}/preview` };
+  }
+
+  // Loom
+  const loom = cleaned.match(/loom\.com\/(?:share|embed)\/([\w-]+)/);
+  if (loom && loom[1]) {
+    return { type: "iframe", url: `https://www.loom.com/embed/${loom[1]}` };
+  }
+
+  // Fallback for custom embedded players or URLs
+  return { type: "iframe", url: cleaned };
 }
 
 type Props = {
@@ -30,7 +73,7 @@ export function VideoPlayer({ videoUrl, videoFilePath, title, onProgress }: Prop
   useEffect(() => {
     let cancel = false;
     async function loadSigned() {
-      if (!videoFilePath) {
+      if (!videoFilePath || !videoFilePath.trim()) {
         setSignedUrl("");
         return;
       }
@@ -71,8 +114,7 @@ export function VideoPlayer({ videoUrl, videoFilePath, title, onProgress }: Prop
     };
   }, [videoFilePath]);
 
-  const hasFile = !!videoFilePath && !errorLoadingFile;
-  const embed = !hasFile || !signedUrl ? toEmbedUrl(videoUrl ?? "") : "";
+  const hasFile = !!videoFilePath && videoFilePath.trim() !== "" && !errorLoadingFile;
 
   if (hasFile && signedUrl) {
     return (
@@ -99,23 +141,53 @@ export function VideoPlayer({ videoUrl, videoFilePath, title, onProgress }: Prop
     );
   }
 
-  return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-black shadow-elegant">
-      {embed ? (
+  const embed = parseVideoUrl(videoUrl);
+
+  if (embed.type === "direct") {
+    return (
+      <div className="overflow-hidden rounded-2xl border border-border bg-black shadow-elegant">
+        <video
+          ref={videoRef}
+          src={embed.url}
+          controls
+          controlsList="nodownload"
+          playsInline
+          className="aspect-video w-full"
+          onTimeUpdate={(e) => {
+            const v = e.currentTarget;
+            if (!v.duration) return;
+            const pct = (v.currentTime / v.duration) * 100;
+            if (!notifiedRef.current && pct >= 90 && onProgress) {
+              notifiedRef.current = true;
+              onProgress(pct);
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (embed.type === "iframe" && embed.url) {
+    return (
+      <div className="overflow-hidden rounded-2xl border border-border bg-black shadow-elegant">
         <div className="aspect-video">
           <iframe
-            src={embed}
+            src={embed.url}
             title={title ?? "Vídeo"}
             className="h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
           />
         </div>
-      ) : (
-        <div className="flex aspect-video items-center justify-center text-muted-foreground p-6 text-center">
-          Vídeo ainda não configurado ou indisponível.
-        </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-black shadow-elegant">
+      <div className="flex aspect-video items-center justify-center p-6 text-center text-sm text-muted-foreground">
+        Nenhum vídeo configurado para esta aula. Acesse o Painel do Administrador para cadastrar a URL ou arquivo de vídeo.
+      </div>
     </div>
   );
 }
