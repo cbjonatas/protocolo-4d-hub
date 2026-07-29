@@ -5,16 +5,29 @@ import { Progress } from "@/components/ui/progress";
 import { fetchFullCourse } from "@/lib/course-data";
 
 export const Route = createFileRoute("/_authenticated/progresso")({
-  head: () => ({ meta: [{ title: "Meu Progresso — Informática com Jhon" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Meu Progresso — Informática com Jhon" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: ProgressPage,
 });
 
 function ProgressPage() {
-  const { data } = useQuery({ queryKey: ["course-full", "protocolo-4d"], queryFn: () => fetchFullCourse("protocolo-4d") });
-  if (!data) return <div className="container mx-auto px-4 py-10 text-muted-foreground">Carregando...</div>;
+  const { data } = useQuery({
+    queryKey: ["course-full", "protocolo-4d"],
+    queryFn: () => fetchFullCourse("protocolo-4d"),
+  });
+  if (!data)
+    return <div className="container mx-auto px-4 py-10 text-muted-foreground">Carregando...</div>;
 
-  const lTotal = data.lessons.length, gTotal = data.goals.length, eTotal = data.exams.length;
-  const lDone = data.lessonProgress.size, gDone = data.goalProgress.size, eDone = data.examProgress.size;
+  const lTotal = data.lessons.length,
+    gTotal = data.goals.length,
+    eTotal = data.exams.length;
+  const lDone = data.lessonProgress.size,
+    gDone = data.goalProgress.size,
+    eDone = data.examProgress.size;
   const total = lTotal + gTotal + eTotal;
   const done = lDone + gDone + eDone;
   const percent = total ? Math.round((done / total) * 100) : 0;
@@ -30,7 +43,9 @@ function ProgressPage() {
             <Trophy className="h-7 w-7 text-gold-foreground" />
           </div>
           <div className="flex-1">
-            <div className="text-xs font-semibold uppercase tracking-widest text-gold">Protocolo 4D</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-gold">
+              Protocolo 4D
+            </div>
             <h2 className="font-display text-xl font-bold">{percent}% concluído</h2>
           </div>
         </div>
@@ -46,12 +61,27 @@ function ProgressPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, done, total }: { icon: any; label: string; done: number; total: number }) {
+function StatCard({
+  icon: Icon,
+  label,
+  done,
+  total,
+}: {
+  icon: any;
+  label: string;
+  done: number;
+  total: number;
+}) {
   const pct = total ? Math.round((done / total) * 100) : 0;
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-elegant">
-      <div className="flex items-center gap-2 text-muted-foreground"><Icon className="h-4 w-4" /> {label}</div>
-      <div className="mt-2 font-display text-3xl font-bold">{done}<span className="text-lg text-muted-foreground">/{total}</span></div>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="h-4 w-4" /> {label}
+      </div>
+      <div className="mt-2 font-display text-3xl font-bold">
+        {done}
+        <span className="text-lg text-muted-foreground">/{total}</span>
+      </div>
       <Progress value={pct} className="mt-3 h-2" />
     </div>
   );

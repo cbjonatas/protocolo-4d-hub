@@ -10,7 +10,9 @@ import { useMe } from "@/components/app-shell";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
-  head: () => ({ meta: [{ title: "Meu Perfil — Informática com Jhon" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [{ title: "Meu Perfil — Informática com Jhon" }, { name: "robots", content: "noindex" }],
+  }),
   component: ProfilePage,
 });
 
@@ -33,7 +35,10 @@ function ProfilePage() {
     e.preventDefault();
     if (!me?.user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ full_name: fullName, whatsapp }).eq("id", me.user.id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ full_name: fullName, whatsapp })
+      .eq("id", me.user.id);
     setSaving(false);
     if (error) return toast.error("Erro ao salvar.");
     qc.invalidateQueries({ queryKey: ["me"] });
@@ -60,7 +65,10 @@ function ProfilePage() {
       <h1 className="font-display text-3xl font-bold md:text-4xl">Meu Perfil</h1>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <form onSubmit={saveProfile} className="rounded-2xl border border-border bg-card p-6 shadow-elegant">
+        <form
+          onSubmit={saveProfile}
+          className="rounded-2xl border border-border bg-card p-6 shadow-elegant"
+        >
           <div className="mb-4 flex items-center gap-2 font-display text-lg font-semibold">
             <User className="h-5 w-5 text-gold" /> Informações
           </div>
@@ -77,13 +85,20 @@ function ProfilePage() {
               <Label>WhatsApp</Label>
               <Input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
             </div>
-            <Button type="submit" disabled={saving} className="w-full bg-gradient-primary shadow-glow">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="w-full bg-gradient-primary shadow-glow"
+            >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar alterações"}
             </Button>
           </div>
         </form>
 
-        <form onSubmit={changePassword} className="rounded-2xl border border-border bg-card p-6 shadow-elegant">
+        <form
+          onSubmit={changePassword}
+          className="rounded-2xl border border-border bg-card p-6 shadow-elegant"
+        >
           <div className="mb-4 flex items-center gap-2 font-display text-lg font-semibold">
             <KeyRound className="h-5 w-5 text-gold" /> Alterar senha
           </div>

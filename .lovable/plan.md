@@ -1,4 +1,3 @@
-
 # Plataforma Informática com Jhon — Área de Membros
 
 Vou construir a plataforma completa em fases. Como é um escopo grande, faço a **Fase 1 (fundação funcional completa)** neste primeiro turno e refino a partir do seu feedback.
@@ -14,6 +13,7 @@ Vou construir a plataforma completa em fases. Como é um escopo grande, faço a 
 ## Identidade visual
 
 Design system em `src/styles.css` com tokens semânticos (oklch):
+
 - Azul-marinho profundo como `--background` do app logado
 - Azul elétrico como `--primary`
 - Dourado como `--accent` (destaques, medalhas, badges de progresso)
@@ -43,11 +43,13 @@ RLS em todas as tabelas. Liberação de conteúdo calculada por `enrolled_at + r
 ## Rotas
 
 **Públicas**
+
 - `/` — landing com branding e CTA
 - `/auth` — login + cadastro (tabs)
 - `/reset-password` — definir nova senha
 
 **Aluno (`_authenticated`)**
+
 - `/dashboard` — cards de "Meus Cursos" + progresso geral
 - `/curso/$slug` — visão do curso com os 4 ciclos
 - `/curso/$slug/aula/$lessonId` — player + PDFs + marcar concluída
@@ -57,6 +59,7 @@ RLS em todas as tabelas. Liberação de conteúdo calculada por `enrolled_at + r
 - `/perfil` — editar nome/whatsapp + trocar senha
 
 **Admin (`_authenticated/admin`, gate por role)**
+
 - `/admin` — indicadores (total alunos, ativos, progresso médio, concluintes)
 - `/admin/alunos`
 - `/admin/cursos` (CRUD)
@@ -65,6 +68,7 @@ RLS em todas as tabelas. Liberação de conteúdo calculada por `enrolled_at + r
 ## Seed inicial
 
 Migração cria automaticamente:
+
 - Curso **PROTOCOLO 4D** (ativo)
 - 4 ciclos (1D, 2D, 3D, 4D)
 - 4 videoaulas (offsets 0/7/14/21 dias)

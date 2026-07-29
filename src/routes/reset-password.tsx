@@ -45,11 +45,15 @@ function ResetPassword() {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary shadow-glow">
             <Shield className="h-5 w-5 text-primary-foreground" />
           </div>
-          <div className="font-display text-lg font-bold">Informática <span className="text-gold">com Jhon</span></div>
+          <div className="font-display text-lg font-bold">
+            Informática <span className="text-gold">com Jhon</span>
+          </div>
         </div>
         <div className="rounded-2xl border border-border bg-card p-8 shadow-elegant">
           <h1 className="font-display text-xl font-semibold">Definir nova senha</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Escolha uma senha forte para sua conta.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Escolha uma senha forte para sua conta.
+          </p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">Nova senha</Label>
@@ -59,7 +63,11 @@ function ResetPassword() {
               <Label htmlFor="confirm">Confirmar senha</Label>
               <Input id="confirm" name="confirm" type="password" required />
             </div>
-            <Button type="submit" className="w-full bg-gradient-primary shadow-glow" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full bg-gradient-primary shadow-glow"
+              disabled={loading}
+            >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar nova senha"}
             </Button>
           </form>

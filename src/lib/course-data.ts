@@ -32,23 +32,63 @@ export async function fetchCourseBySlug(slug: string) {
 
 export async function fetchFullCourse(slug: string) {
   const { data: u } = await supabase.auth.getUser();
-  if (!u.user) throw new Error("not authenticated");
+  const userId = u.user?.id;
 
-  const course = await fetchCourseBySlug(slug);
+  const { data: course } = await supabase
+    .from("courses")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (!course) {
+    return {
+      course: {
+        id: "",
+        slug: "protocolo-4d",
+        title: "Protocolo 4D",
+        description: "",
+        is_active: true,
+      },
+      enrollment: null,
+      cycles: [],
+      lessons: [],
+      goals: [],
+      exams: [],
+      lessonProgress: new Set<string>(),
+      goalProgress: new Set<string>(),
+      examProgress: new Set<string>(),
+    };
+  }
 
   const [cycles, enrollment, examsRes] = await Promise.all([
     supabase.from("cycles").select("*").eq("course_id", course.id).order("sort_order"),
-    supabase.from("enrollments").select("*").eq("course_id", course.id).eq("user_id", u.user.id).maybeSingle(),
+    userId
+      ? supabase
+          .from("enrollments")
+          .select("*")
+          .eq("course_id", course.id)
+          .eq("user_id", userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     supabase.from("mock_exams").select("*").eq("course_id", course.id).order("sort_order"),
   ]);
   const cycleIds = (cycles.data ?? []).map((c) => c.id);
 
   const [lessonsRes, goalsRes, lessonProgRes, goalProgRes, examProgRes] = await Promise.all([
-    supabase.from("lessons").select("*").in("cycle_id", cycleIds.length ? cycleIds : ["00000000-0000-0000-0000-000000000000"]).order("sort_order"),
-    supabase.from("question_goals").select("*").in("cycle_id", cycleIds.length ? cycleIds : ["00000000-0000-0000-0000-000000000000"]).order("sort_order"),
-    supabase.from("lesson_progress").select("*").eq("user_id", u.user.id),
-    supabase.from("goal_progress").select("*").eq("user_id", u.user.id),
-    supabase.from("exam_progress").select("*").eq("user_id", u.user.id),
+    cycleIds.length
+      ? supabase.from("lessons").select("*").in("cycle_id", cycleIds).order("sort_order")
+      : Promise.resolve({ data: [] }),
+    cycleIds.length
+      ? supabase.from("question_goals").select("*").in("cycle_id", cycleIds).order("sort_order")
+      : Promise.resolve({ data: [] }),
+    userId
+      ? supabase.from("lesson_progress").select("*").eq("user_id", userId)
+      : Promise.resolve({ data: [] }),
+    userId
+      ? supabase.from("goal_progress").select("*").eq("user_id", userId)
+      : Promise.resolve({ data: [] }),
+    userId
+      ? supabase.from("exam_progress").select("*").eq("user_id", userId)
+      : Promise.resolve({ data: [] }),
   ]);
 
   return {
@@ -58,9 +98,9 @@ export async function fetchFullCourse(slug: string) {
     lessons: lessonsRes.data ?? [],
     goals: goalsRes.data ?? [],
     exams: examsRes.data ?? [],
-    lessonProgress: new Set((lessonProgRes.data ?? []).map((r) => r.lesson_id)),
-    goalProgress: new Set((goalProgRes.data ?? []).map((r) => r.goal_id)),
-    examProgress: new Set((examProgRes.data ?? []).map((r) => r.exam_id)),
+    lessonProgress: new Set((lessonProgRes.data ?? []).map((r: any) => r.lesson_id)),
+    goalProgress: new Set((goalProgRes.data ?? []).map((r: any) => r.goal_id)),
+    examProgress: new Set((examProgRes.data ?? []).map((r: any) => r.exam_id)),
   };
 }
 

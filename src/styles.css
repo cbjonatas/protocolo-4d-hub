@@ -6,7 +6,7 @@
 
 @theme inline {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Rajdhani", "Space Grotesk", "Inter", sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -36,6 +36,8 @@
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
   --color-navy: var(--navy);
+  --color-police-blue: var(--police-blue);
+  --color-police-gold: var(--police-gold);
   --color-elite: var(--elite);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -50,93 +52,148 @@
 :root {
   --radius: 0.75rem;
 
-  /* Azul-marinho profundo como fundo do app logado */
-  --background: oklch(0.19 0.05 260);
+  /* Tema Tático Policial: Fundo Escuro Obsidiana/Slate */
+  --background: oklch(0.12 0.03 260);
   --foreground: oklch(0.98 0.01 250);
 
-  --card: oklch(0.23 0.055 262);
+  --card: oklch(0.17 0.04 260);
   --card-foreground: oklch(0.98 0.01 250);
 
-  --popover: oklch(0.23 0.055 262);
+  --popover: oklch(0.17 0.04 260);
   --popover-foreground: oklch(0.98 0.01 250);
 
-  /* Azul elétrico */
-  --primary: oklch(0.65 0.19 255);
-  --primary-foreground: oklch(0.15 0.03 260);
+  /* Dourado distintivo policial / Amarelo Tático */
+  --primary: oklch(0.78 0.18 75);
+  --primary-foreground: oklch(0.12 0.03 260);
 
-  --secondary: oklch(0.30 0.06 262);
+  --secondary: oklch(0.24 0.05 260);
   --secondary-foreground: oklch(0.98 0.01 250);
 
-  --muted: oklch(0.28 0.045 262);
-  --muted-foreground: oklch(0.75 0.03 250);
+  --muted: oklch(0.22 0.04 260);
+  --muted-foreground: oklch(0.7 0.03 250);
 
-  --accent: oklch(0.35 0.09 258);
+  --accent: oklch(0.26 0.06 255);
   --accent-foreground: oklch(0.98 0.01 250);
 
-  --destructive: oklch(0.62 0.22 25);
+  --destructive: oklch(0.6 0.22 25);
   --destructive-foreground: oklch(0.98 0.01 250);
 
-  --border: oklch(0.32 0.05 262 / 0.6);
-  --input: oklch(0.28 0.045 262);
-  --ring: oklch(0.65 0.19 255);
+  --border: oklch(0.28 0.05 260 / 0.7);
+  --input: oklch(0.22 0.04 260);
+  --ring: oklch(0.78 0.18 75);
 
-  --gold: oklch(0.82 0.15 85);
-  --gold-foreground: oklch(0.18 0.03 260);
-  --navy: oklch(0.19 0.05 260);
-  --elite: oklch(0.55 0.22 255);
+  --gold: oklch(0.82 0.17 78);
+  --gold-foreground: oklch(0.12 0.03 260);
+  --navy: oklch(0.12 0.03 260);
+  --police-blue: oklch(0.6 0.19 255);
+  --police-gold: oklch(0.82 0.17 78);
+  --elite: oklch(0.78 0.18 75);
 
-  --gradient-primary: linear-gradient(135deg, oklch(0.55 0.22 255), oklch(0.72 0.15 245));
-  --gradient-gold: linear-gradient(135deg, oklch(0.82 0.15 85), oklch(0.72 0.17 70));
-  --gradient-hero: linear-gradient(135deg, oklch(0.19 0.05 260) 0%, oklch(0.27 0.09 258) 50%, oklch(0.35 0.15 255) 100%);
-  --shadow-elegant: 0 20px 60px -20px oklch(0.10 0.05 260 / 0.55);
-  --shadow-glow: 0 0 40px oklch(0.65 0.19 255 / 0.35);
+  --gradient-primary: linear-gradient(135deg, oklch(0.78 0.18 75), oklch(0.68 0.19 65));
+  --gradient-police-blue: linear-gradient(135deg, oklch(0.55 0.2 255), oklch(0.4 0.18 260));
+  --gradient-gold: linear-gradient(135deg, oklch(0.85 0.18 80), oklch(0.7 0.16 65));
+  --gradient-hero: linear-gradient(
+    135deg,
+    oklch(0.1 0.03 260) 0%,
+    oklch(0.16 0.05 258) 50%,
+    oklch(0.22 0.08 255) 100%
+  );
 
-  --sidebar: oklch(0.17 0.05 260);
+  --shadow-elegant: 0 20px 50px -15px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 35px oklch(0.78 0.18 75 / 0.3);
+  --shadow-glow-blue: 0 0 35px oklch(0.6 0.19 255 / 0.3);
+
+  --sidebar: oklch(0.12 0.03 260);
   --sidebar-foreground: oklch(0.95 0.01 250);
-  --sidebar-primary: oklch(0.65 0.19 255);
-  --sidebar-primary-foreground: oklch(0.15 0.03 260);
-  --sidebar-accent: oklch(0.25 0.06 262);
+  --sidebar-primary: oklch(0.78 0.18 75);
+  --sidebar-primary-foreground: oklch(0.12 0.03 260);
+  --sidebar-accent: oklch(0.2 0.05 260);
   --sidebar-accent-foreground: oklch(0.98 0.01 250);
-  --sidebar-border: oklch(0.28 0.05 262 / 0.6);
-  --sidebar-ring: oklch(0.65 0.19 255);
+  --sidebar-border: oklch(0.25 0.04 260 / 0.7);
+  --sidebar-ring: oklch(0.78 0.18 75);
 }
 
-/* App usa modo escuro por padrão; expõe .light se precisar de páginas claras */
 .light {
-  --background: oklch(0.99 0.005 250);
-  --foreground: oklch(0.19 0.05 260);
+  --background: oklch(0.98 0.005 250);
+  --foreground: oklch(0.12 0.03 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.05 260);
+  --card-foreground: oklch(0.12 0.03 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.19 0.05 260);
-  --primary: oklch(0.45 0.22 258);
+  --popover-foreground: oklch(0.12 0.03 260);
+  --primary: oklch(0.7 0.18 75);
   --primary-foreground: oklch(0.98 0.01 250);
   --secondary: oklch(0.94 0.02 250);
-  --secondary-foreground: oklch(0.19 0.05 260);
+  --secondary-foreground: oklch(0.12 0.03 260);
   --muted: oklch(0.94 0.02 250);
   --muted-foreground: oklch(0.45 0.04 258);
   --accent: oklch(0.94 0.02 250);
-  --accent-foreground: oklch(0.19 0.05 260);
+  --accent-foreground: oklch(0.12 0.03 260);
   --border: oklch(0.9 0.02 250);
   --input: oklch(0.9 0.02 250);
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html, body {
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
 }
 
-@utility bg-gradient-primary { background-image: var(--gradient-primary); }
-@utility bg-gradient-gold { background-image: var(--gradient-gold); }
-@utility bg-gradient-hero { background-image: var(--gradient-hero); }
-@utility shadow-elegant { box-shadow: var(--shadow-elegant); }
-@utility shadow-glow { box-shadow: var(--shadow-glow); }
-@utility text-gold { color: var(--color-gold); }
-@utility bg-gold { background-color: var(--color-gold); color: var(--color-gold-foreground); }
-@utility border-gold { border-color: var(--color-gold); }
+@utility bg-gradient-primary {
+  background-image: var(--gradient-primary);
+}
+@utility bg-gradient-police-blue {
+  background-image: var(--gradient-police-blue);
+}
+@utility bg-gradient-gold {
+  background-image: var(--gradient-gold);
+}
+@utility bg-gradient-hero {
+  background-image: var(--gradient-hero);
+}
+@utility shadow-elegant {
+  box-shadow: var(--shadow-elegant);
+}
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+@utility shadow-glow-blue {
+  box-shadow: var(--shadow-glow-blue);
+}
+@utility text-gold {
+  color: var(--color-gold);
+}
+@utility bg-gold {
+  background-color: var(--color-gold);
+  color: var(--color-gold-foreground);
+}
+@utility border-gold {
+  border-color: var(--color-gold);
+}
+
+/* Utilitários Táticos Especiais */
+.tactical-border {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  box-shadow: inset 0 0 15px rgba(245, 158, 11, 0.05);
+}
+
+.tactical-card {
+  background: linear-gradient(180deg, rgba(23, 30, 46, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  backdrop-filter: blur(12px);
+}

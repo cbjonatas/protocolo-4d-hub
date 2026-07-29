@@ -3,7 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, ArrowRight, Trophy, Target, PlayCircle } from "lucide-react";
+import {
+  BookOpen,
+  ArrowRight,
+  Trophy,
+  Target,
+  PlayCircle,
+  Flame,
+  CheckCircle,
+  Sparkles,
+  Shield,
+} from "lucide-react";
 import { fetchFullCourse } from "@/lib/course-data";
 import { useMe } from "@/components/app-shell";
 
@@ -30,28 +40,61 @@ async function fetchMyCourses() {
 
 function Dashboard() {
   const { data: me } = useMe();
-  const { data: enrollments = [] } = useQuery({ queryKey: ["my-courses"], queryFn: fetchMyCourses });
+  const { data: enrollments = [] } = useQuery({
+    queryKey: ["my-courses"],
+    queryFn: fetchMyCourses,
+  });
   const firstName = me?.profile?.full_name?.split(" ")[0] ?? "aluno";
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold md:text-4xl">
-          Olá, <span className="text-gold">{firstName}</span> 👋
-        </h1>
-        <p className="mt-2 text-muted-foreground">Continue sua jornada rumo à aprovação.</p>
+      {/* Header & Welcome */}
+      <div className="mb-8 flex flex-col justify-between gap-6 md:flex-row md:items-center rounded-2xl tactical-card p-6 md:p-8">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-md bg-gold/15 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-gold border border-gold/30 mb-3">
+            <Shield className="h-3.5 w-3.5 fill-current" /> CARREIRAS POLICIAIS
+          </div>
+          <h1 className="font-display text-3xl font-extrabold tracking-wide md:text-4xl text-foreground">
+            OLÁ, <span className="text-gold">{firstName}</span> 👋
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground font-sans max-w-xl">
+            Sua plataforma de preparação contínua rumo à aprovação no Protocolo 4D.
+          </p>
+        </div>
+
+        <div className="inline-flex items-center gap-4 rounded-xl border border-gold/30 bg-gold/10 p-4 shadow-glow shrink-0">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gold text-black font-extrabold">
+            <Flame className="h-7 w-7 fill-current animate-pulse" />
+          </div>
+          <div>
+            <div className="text-[11px] font-extrabold uppercase tracking-widest text-gold">
+              SEQUÊNCIA DE ESTUDOS
+            </div>
+            <div className="text-sm font-bold text-foreground">ATIVO HOJE 🔥</div>
+          </div>
+        </div>
       </div>
 
-      <section>
-        <h2 className="mb-4 font-display text-xl font-semibold">Meus Cursos</h2>
+      <section className="mb-10">
+        <h2 className="mb-5 font-display text-xl font-bold tracking-wider flex items-center gap-2 text-foreground">
+          <Target className="h-5 w-5 text-gold" /> MEUS CURSOS
+        </h2>
         {enrollments.length === 0 ? (
-          <div className="rounded-2xl border border-border bg-card p-8 text-center">
-            <p className="text-muted-foreground">Você ainda não tem cursos ativos.</p>
+          <div className="tactical-card rounded-2xl p-10 text-center">
+            <Shield className="mx-auto h-12 w-12 text-gold opacity-50 mb-3" />
+            <p className="text-muted-foreground font-sans">Você ainda não tem cursos ativos.</p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {enrollments.map((e: any) => (
-              <CourseCard key={e.course_id} courseId={e.course_id} slug={e.courses.slug} title={e.courses.title} description={e.courses.description} coverUrl={e.courses.cover_url} />
+              <CourseCard
+                key={e.course_id}
+                courseId={e.course_id}
+                slug={e.courses.slug}
+                title={e.courses.title}
+                description={e.courses.description}
+                coverUrl={e.courses.cover_url}
+              />
             ))}
           </div>
         )}
@@ -60,8 +103,18 @@ function Dashboard() {
   );
 }
 
-function CourseCard({ courseId, slug, title, description, coverUrl }: {
-  courseId: string; slug: string; title: string; description: string; coverUrl?: string;
+function CourseCard({
+  courseId,
+  slug,
+  title,
+  description,
+  coverUrl,
+}: {
+  courseId: string;
+  slug: string;
+  title: string;
+  description: string;
+  coverUrl?: string;
 }) {
   const { data } = useQuery({
     queryKey: ["course-full", slug],
@@ -71,39 +124,61 @@ function CourseCard({ courseId, slug, title, description, coverUrl }: {
   const stats = computeStats(data);
 
   return (
-    <div className="group overflow-hidden rounded-2xl border border-border bg-card shadow-elegant transition-all hover:border-primary/50 hover:shadow-glow">
-      <div className="relative aspect-video overflow-hidden bg-gradient-primary">
+    <div className="group overflow-hidden rounded-2xl tactical-card shadow-elegant transition-all duration-300 hover:border-gold hover:shadow-glow">
+      <div className="relative aspect-video overflow-hidden bg-gradient-police-blue">
         {coverUrl ? (
-          <img src={coverUrl} alt={title} className="h-full w-full object-cover" />
+          <img
+            src={coverUrl}
+            alt={title}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-hero">
-            <div className="text-center">
-              <Trophy className="mx-auto h-10 w-10 text-gold" />
-              <div className="mt-2 font-display text-2xl font-bold tracking-widest">{title}</div>
+            <div className="text-center p-4">
+              <Trophy className="mx-auto h-12 w-12 text-gold animate-bounce" />
+              <div className="mt-2 font-display text-2xl font-extrabold tracking-widest text-gold">
+                {title}
+              </div>
+              <div className="mt-1 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+                CURSO PREPARATÓRIO
+              </div>
             </div>
           </div>
         )}
+        <div className="absolute top-3 right-3 rounded-md bg-gold px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-black shadow-md">
+          PROTOCOLO 4D
+        </div>
       </div>
-      <div className="p-5">
-        <h3 className="font-display text-lg font-semibold">{title}</h3>
-        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{description}</p>
 
-        <div className="mt-4">
-          <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-            <span>Progresso</span>
-            <span className="font-semibold text-foreground">{stats.percent}%</span>
+      <div className="p-6">
+        <h3 className="font-display text-lg font-bold tracking-wider text-foreground">{title}</h3>
+        <p className="mt-1 line-clamp-2 text-xs font-sans text-muted-foreground">{description}</p>
+
+        <div className="mt-5 rounded-xl border border-gold/20 bg-background/60 p-3.5">
+          <div className="mb-2 flex justify-between text-xs font-bold uppercase tracking-wider">
+            <span className="text-muted-foreground">DESEMPENHO GERAL</span>
+            <span className="text-gold">{stats.percent}%</span>
           </div>
-          <Progress value={stats.percent} className="h-2" />
-          <div className="mt-3 flex gap-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1"><PlayCircle className="h-3 w-3" /> {stats.lessons}</span>
-            <span className="inline-flex items-center gap-1"><Target className="h-3 w-3" /> {stats.goals}</span>
-            <span className="inline-flex items-center gap-1"><BookOpen className="h-3 w-3" /> {stats.exams}</span>
+          <Progress value={stats.percent} className="h-2.5 bg-muted" />
+          <div className="mt-3 flex justify-between gap-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1">
+              <PlayCircle className="h-3.5 w-3.5 text-gold" /> {stats.lessons}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Target className="h-3.5 w-3.5 text-gold" /> {stats.goals}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <BookOpen className="h-3.5 w-3.5 text-gold" /> {stats.exams}
+            </span>
           </div>
         </div>
 
-        <Button asChild className="mt-5 w-full bg-gradient-primary shadow-glow">
+        <Button
+          asChild
+          className="mt-5 w-full bg-gradient-gold text-black font-extrabold uppercase tracking-wider shadow-glow hover:brightness-110 h-11"
+        >
           <Link to="/curso/$slug" params={{ slug }}>
-            Acessar Curso <ArrowRight className="ml-1 h-4 w-4" />
+            ACESSAR CURSO <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
       </div>
