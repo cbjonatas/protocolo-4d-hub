@@ -147,10 +147,12 @@ function ExamEditor({ exam, onSaved }: { exam: any; onSaved: () => void }) {
   });
   return (
     <EditorCard title={exam.title} sub={exam.external_url || "sem link"} onEditContent={() => (
-      <form onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); save.mutate({ title: f.get("title"), description: f.get("description"), external_url: f.get("external_url"), release_offset_days: Number(f.get("release_offset_days")) }); }} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); save.mutate({ title: f.get("title"), description: f.get("description"), external_url: f.get("external_url"), correction_url: f.get("correction_url"), answer_key_url: f.get("answer_key_url"), release_offset_days: Number(f.get("release_offset_days")) }); }} className="space-y-3">
         <div className="space-y-1.5"><Label>Título</Label><Input name="title" defaultValue={exam.title} required /></div>
         <div className="space-y-1.5"><Label>Descrição</Label><Textarea name="description" defaultValue={exam.description} /></div>
         <div className="space-y-1.5"><Label>Link do simulado</Label><Input name="external_url" defaultValue={exam.external_url} placeholder="https://..." /></div>
+        <div className="space-y-1.5"><Label>Correção do simulado (link)</Label><Input name="correction_url" defaultValue={exam.correction_url ?? ""} placeholder="https://... (vídeo/PDF de correção)" /></div>
+        <div className="space-y-1.5"><Label>Gabarito do simulado (link)</Label><Input name="answer_key_url" defaultValue={exam.answer_key_url ?? ""} placeholder="https://... (PDF/gabarito)" /></div>
         <div className="space-y-1.5"><Label>Liberação (dias)</Label><Input name="release_offset_days" type="number" min={0} defaultValue={exam.release_offset_days} /></div>
         <Button type="submit" disabled={save.isPending} className="w-full bg-gradient-primary">{save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}</Button>
       </form>
