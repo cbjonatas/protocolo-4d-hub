@@ -76,7 +76,7 @@ export const DEFAULT_LESSONS = [
     title: "Vídeo Aula 01 — Fundamentos de Informática & Hardware",
     description:
       "Assista à aula completa do Ciclo 01 diretamente na plataforma e acompanhe os conceitos-chave de Informática.",
-    video_url: "https://www.youtube.com/watch?v=L_LUpnjgPso",
+    video_url: "https://www.youtube.com/watch?v=IHjymfZBAsM",
     video_file_path: "",
     release_offset_days: 0,
     sort_order: 1,

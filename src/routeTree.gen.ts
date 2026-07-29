@@ -22,6 +22,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminAlunosRouteImport } from './routes/_authenticated/admin/alunos'
 import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin/cursos'
 import { Route as AuthenticatedCursoSlugRouteImport } from './routes/_authenticated/curso.$slug'
+import { Route as AuthenticatedCursoSlugIndexRouteImport } from './routes/_authenticated/curso.$slug.index'
 import { Route as AuthenticatedCursoSlugAulaLessonIdRouteImport } from './routes/_authenticated/curso.$slug.aula.$lessonId'
 import { Route as AuthenticatedCursoSlugMetaGoalIdRouteImport } from './routes/_authenticated/curso.$slug.meta.$goalId'
 import { Route as AuthenticatedCursoSlugSimuladoExamIdRouteImport } from './routes/_authenticated/curso.$slug.simulado.$examId'
@@ -92,6 +93,12 @@ const AuthenticatedCursoSlugRoute = AuthenticatedCursoSlugRouteImport.update({
   path: '/curso/$slug',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCursoSlugIndexRoute =
+  AuthenticatedCursoSlugIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedCursoSlugRoute,
+  } as any)
 const AuthenticatedCursoSlugAulaLessonIdRoute =
   AuthenticatedCursoSlugAulaLessonIdRouteImport.update({
     id: '/aula/$lessonId',
@@ -124,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/admin/cursos': typeof AuthenticatedAdminCursosRoute
   '/curso/$slug': typeof AuthenticatedCursoSlugRouteWithChildren
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/curso/$slug/': typeof AuthenticatedCursoSlugIndexRoute
   '/curso/$slug/aula/$lessonId': typeof AuthenticatedCursoSlugAulaLessonIdRoute
   '/curso/$slug/meta/$goalId': typeof AuthenticatedCursoSlugMetaGoalIdRoute
   '/curso/$slug/simulado/$examId': typeof AuthenticatedCursoSlugSimuladoExamIdRoute
@@ -138,8 +146,8 @@ export interface FileRoutesByTo {
   '/progresso': typeof AuthenticatedProgressoRoute
   '/admin/alunos': typeof AuthenticatedAdminAlunosRoute
   '/admin/cursos': typeof AuthenticatedAdminCursosRoute
-  '/curso/$slug': typeof AuthenticatedCursoSlugRouteWithChildren
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/curso/$slug': typeof AuthenticatedCursoSlugIndexRoute
   '/curso/$slug/aula/$lessonId': typeof AuthenticatedCursoSlugAulaLessonIdRoute
   '/curso/$slug/meta/$goalId': typeof AuthenticatedCursoSlugMetaGoalIdRoute
   '/curso/$slug/simulado/$examId': typeof AuthenticatedCursoSlugSimuladoExamIdRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/cursos': typeof AuthenticatedAdminCursosRoute
   '/_authenticated/curso/$slug': typeof AuthenticatedCursoSlugRouteWithChildren
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/curso/$slug/': typeof AuthenticatedCursoSlugIndexRoute
   '/_authenticated/curso/$slug/aula/$lessonId': typeof AuthenticatedCursoSlugAulaLessonIdRoute
   '/_authenticated/curso/$slug/meta/$goalId': typeof AuthenticatedCursoSlugMetaGoalIdRoute
   '/_authenticated/curso/$slug/simulado/$examId': typeof AuthenticatedCursoSlugSimuladoExamIdRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/admin/cursos'
     | '/curso/$slug'
     | '/admin/'
+    | '/curso/$slug/'
     | '/curso/$slug/aula/$lessonId'
     | '/curso/$slug/meta/$goalId'
     | '/curso/$slug/simulado/$examId'
@@ -192,8 +202,8 @@ export interface FileRouteTypes {
     | '/progresso'
     | '/admin/alunos'
     | '/admin/cursos'
-    | '/curso/$slug'
     | '/admin'
+    | '/curso/$slug'
     | '/curso/$slug/aula/$lessonId'
     | '/curso/$slug/meta/$goalId'
     | '/curso/$slug/simulado/$examId'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/cursos'
     | '/_authenticated/curso/$slug'
     | '/_authenticated/admin/'
+    | '/_authenticated/curso/$slug/'
     | '/_authenticated/curso/$slug/aula/$lessonId'
     | '/_authenticated/curso/$slug/meta/$goalId'
     | '/_authenticated/curso/$slug/simulado/$examId'
@@ -318,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCursoSlugRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/curso/$slug/': {
+      id: '/_authenticated/curso/$slug/'
+      path: '/'
+      fullPath: '/curso/$slug/'
+      preLoaderRoute: typeof AuthenticatedCursoSlugIndexRouteImport
+      parentRoute: typeof AuthenticatedCursoSlugRoute
+    }
     '/_authenticated/curso/$slug/aula/$lessonId': {
       id: '/_authenticated/curso/$slug/aula/$lessonId'
       path: '/aula/$lessonId'
@@ -361,6 +379,7 @@ const AuthenticatedAdminRouteRouteWithChildren =
   )
 
 interface AuthenticatedCursoSlugRouteChildren {
+  AuthenticatedCursoSlugIndexRoute: typeof AuthenticatedCursoSlugIndexRoute
   AuthenticatedCursoSlugAulaLessonIdRoute: typeof AuthenticatedCursoSlugAulaLessonIdRoute
   AuthenticatedCursoSlugMetaGoalIdRoute: typeof AuthenticatedCursoSlugMetaGoalIdRoute
   AuthenticatedCursoSlugSimuladoExamIdRoute: typeof AuthenticatedCursoSlugSimuladoExamIdRoute
@@ -368,6 +387,7 @@ interface AuthenticatedCursoSlugRouteChildren {
 
 const AuthenticatedCursoSlugRouteChildren: AuthenticatedCursoSlugRouteChildren =
   {
+    AuthenticatedCursoSlugIndexRoute: AuthenticatedCursoSlugIndexRoute,
     AuthenticatedCursoSlugAulaLessonIdRoute:
       AuthenticatedCursoSlugAulaLessonIdRoute,
     AuthenticatedCursoSlugMetaGoalIdRoute:
