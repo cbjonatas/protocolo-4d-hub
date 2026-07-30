@@ -11,10 +11,16 @@ import {
   Sparkles,
   UserPlus,
   ShieldAlert,
+  Lock,
+  Key,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getRegisteredStudents } from "@/lib/user-registry";
+import {
+  getRegisteredStudents,
+  updateStudentStatus,
+  updateStudentPassword,
+} from "@/lib/user-registry";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -246,6 +252,8 @@ function StudentRow({
   onUpdated: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [changingPass, setChangingPass] = useState(false);
   const cleanPhone = student.whatsapp?.replace(/\D/g, "");
   const createdDate = student.created_at
     ? new Date(student.created_at).toLocaleDateString("pt-BR")
@@ -270,6 +278,31 @@ function StudentRow({
     onError: (e: any) => toast.error(e.message || "Erro ao atualizar matrícula."),
   });
 
+  function handleToggleBlock() {
+    const nextStatus = !student.is_blocked;
+    updateStudentStatus(student.id || student.email, nextStatus);
+    toast.success(
+      nextStatus
+        ? `Acesso do aluno ${student.full_name} bloqueado!`
+        : `Acesso do aluno ${student.full_name} liberado com sucesso!`
+    );
+    onUpdated();
+  }
+
+  function handleSavePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("A nova senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    setChangingPass(true);
+    updateStudentPassword(student.id || student.email, newPassword);
+    toast.success(`Senha do aluno ${student.full_name} alterada com sucesso!`);
+    setNewPassword("");
+    setChangingPass(false);
+    onUpdated();
+  }
+
   return (
     <tr className="border-t border-border hover:bg-accent/30 transition-colors">
       <td className="px-5 py-4">
@@ -292,9 +325,15 @@ function StudentRow({
       </td>
       <td className="px-5 py-4 text-xs font-semibold text-muted-foreground">{createdDate}</td>
       <td className="px-5 py-4 text-center">
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-400 border border-emerald-500/30">
-          ● Ativo
-        </span>
+        {student.is_blocked ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-0.5 text-xs font-bold text-destructive border border-destructive/30">
+            ● Bloqueado
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-400 border border-emerald-500/30">
+            ● Ativo
+          </span>
+        )}
       </td>
       <td className="px-5 py-4 text-center">
         <div className="inline-flex items-center gap-3 rounded-lg border border-gold/25 bg-gold/10 px-3 py-1.5 text-xs font-bold text-gold">
@@ -318,7 +357,7 @@ function StudentRow({
               variant="outline"
               className="border-gold/40 text-gold font-bold hover:bg-gold/10"
             >
-              <Eye className="mr-1.5 h-4 w-4" /> Detalhes & Matrículas
+              <Eye className="mr-1.5 h-4 w-4" /> Detalhes & Ações
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
@@ -341,6 +380,66 @@ function StudentRow({
                   <strong className="text-gold">Data de Cadastro:</strong>{" "}
                   {new Date(student.created_at).toLocaleDateString("pt-BR")}
                 </div>
+                <div>
+                  <strong className="text-gold">Status de Acesso:</strong>{" "}
+                  <span className={student.is_blocked ? "text-destructive font-bold" : "text-emerald-400 font-bold"}>
+                    {student.is_blocked ? "Bloqueado" : "Ativo / Liberado"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Account Controls Card: Block/Unblock & Password */}
+              <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-gold flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Key className="h-4 w-4" /> Ações de Conta & Segurança
+                  </span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    size="sm"
+                    variant={student.is_blocked ? "default" : "destructive"}
+                    onClick={handleToggleBlock}
+                    className={
+                      student.is_blocked
+                        ? "flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                        : "flex-1 text-xs font-bold"
+                    }
+                  >
+                    {student.is_blocked ? (
+                      <>
+                        <UserCheck className="mr-1.5 h-4 w-4" /> Liberar Acesso do Aluno
+                      </>
+                    ) : (
+                      <>
+                        <ShieldAlert className="mr-1.5 h-4 w-4" /> Bloquear Acesso do Aluno
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <form onSubmit={handleSavePassword} className="pt-2 border-t border-border/60 space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Lock className="h-3.5 w-3.5 text-gold" /> Alterar Senha do Aluno
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      placeholder="Digite a nova senha (min. 6 carac.)"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="bg-background text-xs"
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={changingPass || !newPassword || newPassword.length < 6}
+                      className="bg-gradient-gold text-black font-extrabold text-xs whitespace-nowrap"
+                    >
+                      Salvar Senha
+                    </Button>
+                  </div>
+                </form>
               </div>
 
               {/* Progress Summary Card */}

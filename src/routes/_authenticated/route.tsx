@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { isStudentBlocked } from "@/lib/user-registry";
 import { AppShell } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -12,6 +13,15 @@ export const Route = createFileRoute("/_authenticated")({
         throw redirect({ to: "/admin-login" });
       }
       throw redirect({ to: "/auth" });
+    }
+
+    // If visiting student routes, verify student is not blocked
+    if (!location.pathname.startsWith("/admin")) {
+      const email = data.user.email ?? "";
+      if (isStudentBlocked(email) || isStudentBlocked(data.user.id)) {
+        await supabase.auth.signOut();
+        throw redirect({ to: "/auth" });
+      }
     }
 
     // If visiting admin routes, verify admin role explicitly

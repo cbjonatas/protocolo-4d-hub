@@ -5,6 +5,8 @@ export interface RegisteredStudent {
   whatsapp: string;
   created_at: string;
   updated_at?: string;
+  is_blocked?: boolean;
+  password?: string;
 }
 
 export const DEFAULT_GEOVANNA_STUDENT: RegisteredStudent = {
@@ -14,6 +16,7 @@ export const DEFAULT_GEOVANNA_STUDENT: RegisteredStudent = {
   whatsapp: "(11) 98765-4321",
   created_at: "2026-07-30T10:00:00.000Z",
   updated_at: "2026-07-30T10:00:00.000Z",
+  is_blocked: false,
 };
 
 export const DEFAULT_ADMIN_USER = {
@@ -59,7 +62,11 @@ export function getRegisteredStudents(): RegisteredStudent[] {
     );
 
     if (geoIndex >= 0) {
-      list[geoIndex] = { ...list[geoIndex], email: DEFAULT_GEOVANNA_STUDENT.email };
+      list[geoIndex] = {
+        ...DEFAULT_GEOVANNA_STUDENT,
+        ...list[geoIndex],
+        email: DEFAULT_GEOVANNA_STUDENT.email,
+      };
     } else {
       list.unshift(DEFAULT_GEOVANNA_STUDENT);
     }
@@ -89,5 +96,56 @@ export function saveRegisteredStudent(student: RegisteredStudent): RegisteredStu
   } catch (e) {
     console.error("Error saving registered student:", e);
     return [DEFAULT_GEOVANNA_STUDENT];
+  }
+}
+
+export function updateStudentStatus(studentIdOrEmail: string, isBlocked: boolean): RegisteredStudent[] {
+  if (typeof window === "undefined") return [DEFAULT_GEOVANNA_STUDENT];
+  try {
+    const current = getRegisteredStudents();
+    const idx = current.findIndex(
+      (s) => s.id === studentIdOrEmail || s.email.toLowerCase() === studentIdOrEmail.toLowerCase()
+    );
+    if (idx >= 0) {
+      current[idx].is_blocked = isBlocked;
+      current[idx].updated_at = new Date().toISOString();
+      localStorage.setItem("p4d_all_registered_students", JSON.stringify(current));
+    }
+    return current;
+  } catch (e) {
+    console.error("Error updating student status:", e);
+    return getRegisteredStudents();
+  }
+}
+
+export function updateStudentPassword(studentIdOrEmail: string, newPassword: string): RegisteredStudent[] {
+  if (typeof window === "undefined") return [DEFAULT_GEOVANNA_STUDENT];
+  try {
+    const current = getRegisteredStudents();
+    const idx = current.findIndex(
+      (s) => s.id === studentIdOrEmail || s.email.toLowerCase() === studentIdOrEmail.toLowerCase()
+    );
+    if (idx >= 0) {
+      current[idx].password = newPassword;
+      current[idx].updated_at = new Date().toISOString();
+      localStorage.setItem("p4d_all_registered_students", JSON.stringify(current));
+    }
+    return current;
+  } catch (e) {
+    console.error("Error updating student password:", e);
+    return getRegisteredStudents();
+  }
+}
+
+export function isStudentBlocked(emailOrId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const list = getRegisteredStudents();
+    const target = list.find(
+      (s) => s.id === emailOrId || s.email.toLowerCase() === emailOrId.toLowerCase()
+    );
+    return !!target?.is_blocked;
+  } catch {
+    return false;
   }
 }

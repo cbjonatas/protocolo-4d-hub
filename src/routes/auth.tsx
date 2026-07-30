@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { saveRegisteredStudent } from "@/lib/user-registry";
+import { saveRegisteredStudent, isStudentBlocked } from "@/lib/user-registry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -120,6 +120,12 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       toast.error(parsed.error.issues[0].message);
       return;
     }
+
+    if (isStudentBlocked(parsed.data.email)) {
+      toast.error("Sua conta está bloqueada pelo administrador. Entre em contato com o suporte.");
+      return;
+    }
+
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
     if (error || !data.user) {
