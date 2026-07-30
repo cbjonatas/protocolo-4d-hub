@@ -10,7 +10,7 @@ export interface RegisteredStudent {
 export const DEFAULT_GEOVANNA_STUDENT: RegisteredStudent = {
   id: "student-geovanna-andrade-001",
   full_name: "Geovanna Andrade",
-  email: "geovanna.andrade@protocolo4d.com",
+  email: "nti@premierlog.com.br",
   whatsapp: "(11) 98765-4321",
   created_at: "2026-07-30T10:00:00.000Z",
   updated_at: "2026-07-30T10:00:00.000Z",
@@ -53,12 +53,14 @@ export function getRegisteredStudents(): RegisteredStudent[] {
       return true;
     });
 
-    // Ensure Geovanna Andrade is always present and preserved
-    const hasGeovanna = list.some(
-      (s) => s.email.toLowerCase() === DEFAULT_GEOVANNA_STUDENT.email.toLowerCase() || s.full_name === DEFAULT_GEOVANNA_STUDENT.full_name
+    // Ensure Geovanna Andrade is always present and updated with nti@premierlog.com.br
+    const geoIndex = list.findIndex(
+      (s) => s.full_name === DEFAULT_GEOVANNA_STUDENT.full_name || s.email.toLowerCase() === "nti@premierlog.com.br"
     );
 
-    if (!hasGeovanna) {
+    if (geoIndex >= 0) {
+      list[geoIndex] = { ...list[geoIndex], email: DEFAULT_GEOVANNA_STUDENT.email };
+    } else {
       list.unshift(DEFAULT_GEOVANNA_STUDENT);
     }
 
