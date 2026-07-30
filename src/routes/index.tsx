@@ -136,146 +136,129 @@ function Landing() {
 
         {/* Section: Quem é Jônatas Gomes? */}
         <section id="sobre" className="scroll-mt-24">
-          <div className="tactical-card rounded-3xl p-8 md:p-12 relative overflow-hidden border border-gold/30 shadow-elegant">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-gold/5 rounded-full blur-3xl -z-10 pointer-events-none" />
-
-            <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-              {/* Left Column: Photo & Badges */}
-              <div className="lg:col-span-5 flex flex-col items-center">
-                <div className="relative group w-full max-w-sm">
-                  {/* Glowing background accent */}
-                  <div className="absolute -inset-1 rounded-3xl bg-gradient-gold opacity-30 blur-lg group-hover:opacity-50 transition duration-500" />
-
-                  {/* Photo Container */}
-                  <div className="relative rounded-2xl overflow-hidden border-2 border-gold/40 bg-card shadow-2xl">
-                    <img
-                      src="/prof-jonatas.jpg"
-                      alt="Prof. Jônatas Gomes"
-                      className="w-full h-auto object-cover transform group-hover:scale-105 transition duration-500"
-                    />
-                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 text-center">
-                      <div className="font-display text-xl font-extrabold text-foreground tracking-wider">
-                        JÔNATAS GOMES
-                      </div>
-                      <div className="text-xs font-bold text-gold uppercase tracking-widest">
-                        Especialista em TI & Concursos Policiais
-                      </div>
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
+            {/* Left Column: Photo & Stats */}
+            <div className="lg:col-span-5 flex flex-col items-center">
+              <div className="relative w-full max-w-sm">
+                <div className="absolute -inset-1 rounded-3xl bg-gradient-gold opacity-20 blur-xl" />
+                <div className="relative rounded-3xl overflow-hidden border border-gold/30 shadow-2xl bg-card">
+                  <img
+                    src="/prof-jonatas.jpg"
+                    alt="Prof. Jônatas Gomes"
+                    className="w-full h-auto object-cover"
+                  />
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background via-background/80 to-transparent p-6 text-center">
+                    <div className="font-display text-2xl font-extrabold text-foreground tracking-wide">
+                      JÔNATAS GOMES
                     </div>
-                  </div>
-                </div>
-
-                {/* Stat Cards under photo */}
-                <div className="grid grid-cols-3 gap-3 w-full max-w-sm mt-6">
-                  <div className="bg-card/90 border border-gold/30 rounded-xl p-3 text-center">
-                    <div className="font-display text-xl font-extrabold text-gold">15+</div>
-                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                      Anos TI
-                    </div>
-                  </div>
-                  <div className="bg-card/90 border border-gold/30 rounded-xl p-3 text-center">
-                    <div className="font-display text-xl font-extrabold text-gold">+2.000</div>
-                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                      Alunos
-                    </div>
-                  </div>
-                  <div className="bg-card/90 border border-gold/30 rounded-xl p-3 text-center">
-                    <div className="font-display text-xl font-extrabold text-gold">3x</div>
-                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                      Aprovado
+                    <div className="text-xs font-bold text-gold uppercase tracking-widest mt-0.5">
+                      Especialista em TI & Concursos Policiais
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Narrative */}
-              <div className="lg:col-span-7 space-y-6">
+              {/* Clean Stats Row (no heavy borders) */}
+              <div className="flex items-center justify-around w-full max-w-sm mt-6 py-3 border-y border-gold/15 text-center">
                 <div>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-1 text-xs font-bold uppercase tracking-widest text-gold">
-                    <UserCheck className="h-4 w-4" /> Conheça Seu Mentor
-                  </span>
-                  <h2 className="mt-3 font-display text-3xl md:text-4xl font-extrabold tracking-wide text-foreground">
-                    QUEM É <span className="text-gold">JÔNATAS GOMES</span>?
-                  </h2>
-                </div>
-
-                <p className="text-base text-muted-foreground leading-relaxed font-sans">
-                  Sou <strong className="text-foreground font-semibold">Jônatas Gomes</strong>, especialista em Tecnologia da Informação, formado em Análise e Desenvolvimento de Sistemas pelo Centro Universitário Jorge Amado (UNIJORGE), com mais de <strong className="text-gold font-bold">15 anos de experiência na área de tecnologia</strong>.
-                </p>
-
-                {/* Approvals Showcase */}
-                <div className="p-4 rounded-2xl bg-background/60 border border-gold/25 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gold">
-                    <Trophy className="h-4 w-4" /> Aprovações em Concursos Públicos
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-card/80 border border-gold/20 text-xs font-semibold text-foreground">
-                      <Shield className="h-4 w-4 text-gold flex-shrink-0" />
-                      <span>GCM Salvador <span className="text-gold font-bold">(2019)</span></span>
-                    </div>
-                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-card/80 border border-gold/20 text-xs font-semibold text-foreground">
-                      <Shield className="h-4 w-4 text-gold flex-shrink-0" />
-                      <span>Polícia Federal <span className="text-gold font-bold">(2025)</span></span>
-                    </div>
-                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-card/80 border border-gold/20 text-xs font-semibold text-foreground">
-                      <Shield className="h-4 w-4 text-gold flex-shrink-0" />
-                      <span>Investigador PC-ES <span className="text-gold font-bold">(2026)</span></span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground pt-1 leading-relaxed">
-                    Essa trajetória me permitiu desenvolver uma <strong className="text-gold font-semibold">tática de preparação focada no que realmente cai nas provas</strong>.
-                  </p>
-                </div>
-
-                <p className="text-sm text-muted-foreground leading-relaxed font-sans">
-                  Nos últimos anos, já ajudei <strong className="text-foreground font-semibold">mais de 2.000 alunos</strong> em concursos policiais e militares, utilizando uma preparação baseada em análise de bancas, resolução de questões e estudo direcionado.
-                </p>
-
-                {/* 4 Pillars Summary */}
-                <div className="space-y-3">
-                  <div className="text-xs font-bold uppercase tracking-widest text-gold">
-                    Dessa experiência nasceu o <span className="underline decoration-gold/40">PROTOCOLO 4D</span>:
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-card/50 border border-gold/20">
-                      <CheckCircle2 className="h-4 w-4 text-gold flex-shrink-0 mt-0.5" />
-                      <div className="text-xs">
-                        <strong className="text-foreground font-bold">Revisões Estratégicas</strong>
-                        <p className="text-muted-foreground text-[11px] mt-0.5">Foco nos assuntos mais cobrados pelas bancas.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-card/50 border border-gold/20">
-                      <CheckCircle2 className="h-4 w-4 text-gold flex-shrink-0 mt-0.5" />
-                      <div className="text-xs">
-                        <strong className="text-foreground font-bold">Metas de Questões</strong>
-                        <p className="text-muted-foreground text-[11px] mt-0.5">Aceleração contínua de desempenho.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-card/50 border border-gold/20">
-                      <CheckCircle2 className="h-4 w-4 text-gold flex-shrink-0 mt-0.5" />
-                      <div className="text-xs">
-                        <strong className="text-foreground font-bold">Simulados Direcionados</strong>
-                        <p className="text-muted-foreground text-[11px] mt-0.5">Treinamento do ritmo real da prova.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-card/50 border border-gold/20">
-                      <CheckCircle2 className="h-4 w-4 text-gold flex-shrink-0 mt-0.5" />
-                      <div className="text-xs">
-                        <strong className="text-foreground font-bold">Análise de Desempenho</strong>
-                        <p className="text-muted-foreground text-[11px] mt-0.5">Correção cirúrgica de pontos fracos.</p>
-                      </div>
-                    </div>
+                  <div className="font-display text-2xl font-extrabold text-gold">15+</div>
+                  <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                    Anos de TI
                   </div>
                 </div>
-
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Hoje, o <strong className="text-foreground font-semibold">Informática com Jhon</strong> é uma das principais referências em Informática para concursos em Salvador, com um projeto especializado exclusivamente na disciplina voltada para carreiras policiais.
-                </p>
-
-                {/* Quote Block */}
-                <div className="p-4 rounded-xl border-l-4 border-gold bg-gold/10 text-foreground font-medium text-xs md:text-sm italic leading-relaxed">
-                  "Meu objetivo é simples: ensinar você a estudar Informática do jeito certo, com foco no que realmente aumenta suas chances de aprovação."
+                <div className="h-8 w-px bg-gold/20" />
+                <div>
+                  <div className="font-display text-2xl font-extrabold text-gold">+2.000</div>
+                  <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                    Alunos
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-gold/20" />
+                <div>
+                  <div className="font-display text-2xl font-extrabold text-gold">3x</div>
+                  <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                    Aprovado
+                  </div>
                 </div>
               </div>
+            </div>
+
+            {/* Right Column: Clean Narrative */}
+            <div className="lg:col-span-7 space-y-6">
+              <div>
+                <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gold">
+                  <UserCheck className="h-4 w-4" /> Quem é o Professor
+                </span>
+                <h2 className="mt-2 font-display text-3xl md:text-5xl font-extrabold tracking-wide text-foreground">
+                  JÔNATAS <span className="text-gold">GOMES</span>
+                </h2>
+              </div>
+
+              <p className="text-base text-muted-foreground leading-relaxed font-sans">
+                Sou <strong className="text-foreground font-semibold">Jônatas Gomes</strong>, especialista em Tecnologia da Informação, formado em Análise e Desenvolvimento de Sistemas pelo Centro Universitário Jorge Amado (UNIJORGE), com mais de <strong className="text-gold font-bold">15 anos de experiência na área de tecnologia</strong>.
+              </p>
+
+              {/* Clean Approvals List (No heavy boxed container) */}
+              <div className="space-y-3 pt-1">
+                <div className="text-xs font-bold uppercase tracking-widest text-gold flex items-center gap-2">
+                  <Trophy className="h-4 w-4" /> Aprovações em Concursos Públicos
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gold/10 border border-gold/20 text-xs font-semibold text-foreground">
+                    <Shield className="h-4 w-4 text-gold flex-shrink-0" />
+                    <span>GCM Salvador <span className="text-gold font-bold">(2019)</span></span>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gold/10 border border-gold/20 text-xs font-semibold text-foreground">
+                    <Shield className="h-4 w-4 text-gold flex-shrink-0" />
+                    <span>Polícia Federal <span className="text-gold font-bold">(2025)</span></span>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gold/10 border border-gold/20 text-xs font-semibold text-foreground">
+                    <Shield className="h-4 w-4 text-gold flex-shrink-0" />
+                    <span>Investigador PC-ES <span className="text-gold font-bold">(2026)</span></span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground pt-1 leading-relaxed">
+                  Essa trajetória me permitiu desenvolver uma <strong className="text-gold font-semibold">tática de preparação focada no que realmente cai nas provas</strong>.
+                </p>
+              </div>
+
+              <p className="text-sm text-muted-foreground leading-relaxed font-sans">
+                Nos últimos anos, já ajudei <strong className="text-foreground font-semibold">mais de 2.000 alunos</strong> em concursos policiais e militares, utilizando uma preparação baseada em análise de bancas, resolução de questões e estudo direcionado.
+              </p>
+
+              {/* Clean 4D Checklist */}
+              <div className="space-y-3 pt-2">
+                <div className="text-xs font-bold uppercase tracking-widest text-gold">
+                  Dessa experiência nasceu o <span className="underline decoration-gold/50 underline-offset-4">PROTOCOLO 4D</span>:
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-gold flex-shrink-0" />
+                    <span><strong className="text-foreground font-semibold">Revisões Estratégicas</strong> dos temas mais cobrados</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-gold flex-shrink-0" />
+                    <span><strong className="text-foreground font-semibold">Metas de Questões</strong> para evolução acelerada</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-gold flex-shrink-0" />
+                    <span><strong className="text-foreground font-semibold">Simulados</strong> de desempenho real de prova</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-gold flex-shrink-0" />
+                    <span><strong className="text-foreground font-semibold">Análise de Desempenho</strong> para corrigir pontos fracos</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Hoje, o <strong className="text-foreground font-semibold">Informática com Jhon</strong> é uma das principais referências em Informática para concursos em Salvador, com um projeto especializado exclusivamente na disciplina voltada para carreiras policiais.
+              </p>
+
+              {/* Minimal Quote */}
+              <blockquote className="pl-4 border-l-2 border-gold text-muted-foreground text-xs md:text-sm italic leading-relaxed pt-1">
+                "Meu objetivo é simples: ensinar você a estudar Informática do jeito certo, com foco no que realmente aumenta suas chances de aprovação."
+              </blockquote>
             </div>
           </div>
         </section>
