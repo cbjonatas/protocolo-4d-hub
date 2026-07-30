@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getRegisteredStudents } from "@/lib/user-registry";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -75,12 +76,7 @@ function AdminStudents() {
         const goalProg = goalProgRes?.data ?? [];
         const examProg = examProgRes?.data ?? [];
 
-        let localStudents: any[] = [];
-        try {
-          const raw = localStorage.getItem("p4d_all_registered_students");
-          if (raw) localStudents = JSON.parse(raw);
-        } catch {}
-
+        const localStudents = getRegisteredStudents();
         const allMap = new Map<string, any>();
 
         // 1. Add students from local persistent registry
@@ -96,50 +92,42 @@ function AdminStudents() {
           }
         }
 
-        // 2. Add/override from Supabase profiles
+        // 2. Add/override from Supabase profiles if not admin/synthetic
         for (const p of profiles ?? []) {
-          const userEnrollments = enrollments.filter((e: any) => e.user_id === p.id);
-          const lDone = lessonProg.filter((lp: any) => lp.user_id === p.id).length;
-          const gDone = goalProg.filter((gp: any) => gp.user_id === p.id).length;
-          const eDone = examProg.filter((ep: any) => ep.user_id === p.id).length;
+          const email = p.email?.toLowerCase() ?? "";
+          const name = p.full_name?.toLowerCase() ?? "";
+          if (
+            !email.includes("admin") &&
+            !email.startsWith("jhon") &&
+            !name.includes("administrador") &&
+            !email.startsWith("aluno_") &&
+            !email.includes("teste")
+          ) {
+            const userEnrollments = enrollments.filter((e: any) => e.user_id === p.id);
+            const lDone = lessonProg.filter((lp: any) => lp.user_id === p.id).length;
+            const gDone = goalProg.filter((gp: any) => gp.user_id === p.id).length;
+            const eDone = examProg.filter((ep: any) => ep.user_id === p.id).length;
 
-          allMap.set(p.id, {
-            ...p,
-            enrollments: userEnrollments,
-            lessonsCompleted: lDone,
-            goalsCompleted: gDone,
-            examsCompleted: eDone,
-          });
-        }
-
-        // 3. Synthesize any missing profiles found in enrollments or student roles
-        const studentUserIds = new Set([
-          ...enrollments.map((e: any) => e.user_id),
-          ...roles.filter((r: any) => r.role === "student").map((r: any) => r.user_id),
-        ]);
-
-        for (const uid of studentUserIds) {
-          if (!allMap.has(uid)) {
-            allMap.set(uid, {
-              id: uid,
-              full_name: "Aluno Cadastrado",
-              email: `aluno_${uid.slice(0, 8)}@plataforma.com`,
-              whatsapp: "Não cadastrado",
-              created_at: new Date().toISOString(),
-              enrollments: enrollments.filter((e: any) => e.user_id === uid),
-              lessonsCompleted: lessonProg.filter((lp: any) => lp.user_id === uid).length,
-              goalsCompleted: goalProg.filter((gp: any) => gp.user_id === uid).length,
-              examsCompleted: examProg.filter((ep: any) => ep.user_id === uid).length,
+            allMap.set(p.id, {
+              ...p,
+              enrollments: userEnrollments,
+              lessonsCompleted: lDone,
+              goalsCompleted: gDone,
+              examsCompleted: eDone,
             });
           }
         }
 
-        // 4. Exclude admin accounts
+        // 3. Exclude admin accounts and synthetic test users
         const finalStudents = Array.from(allMap.values()).filter((s: any) => {
           const email = s.email?.toLowerCase() ?? "";
           const name = s.full_name?.toLowerCase() ?? "";
           return (
-            !email.includes("admin") && !email.startsWith("jhon") && !name.includes("administrador")
+            !email.includes("admin") &&
+            !email.startsWith("jhon") &&
+            !name.includes("administrador") &&
+            !(email.startsWith("aluno_") && email.endsWith("@plataforma.com")) &&
+            !email.includes("teste")
           );
         });
 

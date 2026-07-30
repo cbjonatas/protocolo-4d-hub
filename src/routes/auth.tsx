@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { saveRegisteredStudent } from "@/lib/user-registry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -246,18 +247,7 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
 
       // 2. Save to global persistent registry p4d_all_registered_students in localStorage
       try {
-        const existingRaw = localStorage.getItem("p4d_all_registered_students");
-        const list: any[] = existingRaw ? JSON.parse(existingRaw) : [];
-        if (
-          !list.some(
-            (s) =>
-              s.id === studentRecord.id ||
-              s.email?.toLowerCase() === studentRecord.email.toLowerCase(),
-          )
-        ) {
-          list.unshift(studentRecord);
-          localStorage.setItem("p4d_all_registered_students", JSON.stringify(list));
-        }
+        saveRegisteredStudent(studentRecord);
       } catch (e) {
         console.error("Error saving student to local registry:", e);
       }

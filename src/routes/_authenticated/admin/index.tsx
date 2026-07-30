@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Users, BookOpen, Trophy, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getRegisteredStudents } from "@/lib/user-registry";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({ meta: [{ title: "Admin — Painel" }, { name: "robots", content: "noindex" }] }),
@@ -10,37 +11,21 @@ export const Route = createFileRoute("/_authenticated/admin/")({
 
 async function fetchStats() {
   try {
-    const [profilesRes, coursesRes, enrollmentsRes, lessonsCountRes, rolesRes] = await Promise.all([
+    const [profilesRes, coursesRes, enrollmentsRes, lessonsCountRes] = await Promise.all([
       supabase.from("profiles").select("*"),
       supabase.from("courses").select("id", { count: "exact", head: true }),
       supabase.from("enrollments").select("user_id, course_id"),
       supabase.from("lessons").select("id", { count: "exact", head: true }),
-      supabase.from("user_roles").select("user_id, role"),
     ]);
 
     const profiles = profilesRes.data ?? [];
     const enrollments = enrollmentsRes.data ?? [];
-    const roles = rolesRes.data ?? [];
+    const localStudents = getRegisteredStudents();
 
-    let localStudents: any[] = [];
-    try {
-      const raw = localStorage.getItem("p4d_all_registered_students");
-      if (raw) localStudents = JSON.parse(raw);
-    } catch {}
-
-    // Filter out admin users
     const studentUserIds = new Set<string>();
     for (const s of localStudents) {
       if (s && s.id) {
-        const email = s.email?.toLowerCase() ?? "";
-        const name = s.full_name?.toLowerCase() ?? "";
-        if (
-          !email.includes("admin") &&
-          !email.startsWith("jhon") &&
-          !name.includes("administrador")
-        ) {
-          studentUserIds.add(s.id);
-        }
+        studentUserIds.add(s.id);
       }
     }
     for (const p of profiles) {
@@ -49,17 +34,11 @@ async function fetchStats() {
       if (
         !email.includes("admin") &&
         !email.startsWith("jhon") &&
-        !name.includes("administrador")
+        !name.includes("administrador") &&
+        !email.startsWith("aluno_") &&
+        !email.includes("teste")
       ) {
         studentUserIds.add(p.id);
-      }
-    }
-    for (const e of enrollments) {
-      studentUserIds.add(e.user_id);
-    }
-    for (const r of roles) {
-      if (r.role === "student") {
-        studentUserIds.add(r.user_id);
       }
     }
 
