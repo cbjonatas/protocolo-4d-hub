@@ -345,6 +345,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          is_blocked: boolean
           updated_at: string
           whatsapp: string | null
         }
@@ -353,6 +354,7 @@ export type Database = {
           email: string
           full_name?: string
           id: string
+          is_blocked?: boolean
           updated_at?: string
           whatsapp?: string | null
         }
@@ -361,6 +363,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          is_blocked?: boolean
           updated_at?: string
           whatsapp?: string | null
         }
@@ -608,6 +611,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_course: { Args: { p_course_id: string }; Returns: undefined }
+      duplicate_course: {
+        Args: { p_course_id: string; p_new_slug: string; p_new_title: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
