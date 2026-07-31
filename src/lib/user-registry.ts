@@ -11,16 +11,6 @@ export interface RegisteredStudent {
   password?: string;
 }
 
-export const DEFAULT_GEOVANNA_STUDENT: RegisteredStudent = {
-  id: "student-geovanna-andrade-001",
-  full_name: "Geovanna Andrade",
-  email: "nti@premierlog.com.br",
-  whatsapp: "(11) 98765-4321",
-  created_at: "2026-07-30T10:00:00.000Z",
-  updated_at: "2026-07-30T10:00:00.000Z",
-  is_blocked: false,
-};
-
 export const DEFAULT_ADMIN_USER = {
   id: "admin-user-001",
   full_name: "Administrador",
@@ -30,11 +20,10 @@ export const DEFAULT_ADMIN_USER = {
 
 export const ALLOWED_LOGINS = [
   { name: "Administrador", email: DEFAULT_ADMIN_USER.email, role: "admin" },
-  { name: DEFAULT_GEOVANNA_STUDENT.full_name, email: DEFAULT_GEOVANNA_STUDENT.email, role: "student" },
 ];
 
 export function getRegisteredStudents(): RegisteredStudent[] {
-  if (typeof window === "undefined") return [DEFAULT_GEOVANNA_STUDENT];
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem("p4d_all_registered_students");
     let list: RegisteredStudent[] = raw ? JSON.parse(raw) : [];
@@ -61,31 +50,16 @@ export function getRegisteredStudents(): RegisteredStudent[] {
       return true;
     });
 
-    // Ensure Geovanna Andrade is always present and updated with nti@premierlog.com.br
-    const geoIndex = list.findIndex(
-      (s) => s.full_name === DEFAULT_GEOVANNA_STUDENT.full_name || s.email.toLowerCase() === "nti@premierlog.com.br"
-    );
-
-    if (geoIndex >= 0) {
-      list[geoIndex] = {
-        ...DEFAULT_GEOVANNA_STUDENT,
-        ...list[geoIndex],
-        email: DEFAULT_GEOVANNA_STUDENT.email,
-      };
-    } else {
-      list.unshift(DEFAULT_GEOVANNA_STUDENT);
-    }
-
     localStorage.setItem("p4d_all_registered_students", JSON.stringify(list));
     return list;
   } catch (e) {
     console.error("Error reading registered students:", e);
-    return [DEFAULT_GEOVANNA_STUDENT];
+    return [];
   }
 }
 
 export function saveRegisteredStudent(student: RegisteredStudent): RegisteredStudent[] {
-  if (typeof window === "undefined") return [DEFAULT_GEOVANNA_STUDENT];
+  if (typeof window === "undefined") return [];
   try {
     const current = getRegisteredStudents();
     const existingIndex = current.findIndex(
@@ -100,12 +74,21 @@ export function saveRegisteredStudent(student: RegisteredStudent): RegisteredStu
     return current;
   } catch (e) {
     console.error("Error saving registered student:", e);
-    return [DEFAULT_GEOVANNA_STUDENT];
+    return [];
+  }
+}
+
+export function clearAllRegisteredStudents() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem("p4d_all_registered_students");
+  } catch (e) {
+    console.error("Error clearing registered students:", e);
   }
 }
 
 export function updateStudentStatus(studentIdOrEmail: string, isBlocked: boolean): RegisteredStudent[] {
-  if (typeof window === "undefined") return [DEFAULT_GEOVANNA_STUDENT];
+  if (typeof window === "undefined") return [];
   try {
     const current = getRegisteredStudents();
     const idx = current.findIndex(
@@ -134,7 +117,7 @@ export function updateStudentStatus(studentIdOrEmail: string, isBlocked: boolean
 }
 
 export function updateStudentPassword(studentIdOrEmail: string, newPassword: string): RegisteredStudent[] {
-  if (typeof window === "undefined") return [DEFAULT_GEOVANNA_STUDENT];
+  if (typeof window === "undefined") return [];
   try {
     const current = getRegisteredStudents();
     const idx = current.findIndex(
