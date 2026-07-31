@@ -21,6 +21,7 @@ import {
   getRegisteredStudents,
   updateStudentStatus,
   updateStudentPassword,
+  clearAllRegisteredStudents,
 } from "@/lib/user-registry";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -292,14 +293,31 @@ function AdminStudents() {
             </p>
           </div>
 
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, e-mail ou WhatsApp..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-background/80"
-            />
+          <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, e-mail..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-background/80"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (window.confirm("Deseja realmente limpar a base de alunos antigos? Todos os novos cadastros criados a partir de agora continuarão aparecendo normalmente no painel.")) {
+                  clearAllRegisteredStudents();
+                  toast.success("Base de alunos antigos limpa com sucesso!");
+                  qc.invalidateQueries({ queryKey: ["admin-students-full"] });
+                }
+              }}
+              className="border-destructive/40 text-destructive hover:bg-destructive/15 text-xs font-bold shrink-0"
+              title="Limpar registros antigos de teste"
+            >
+              🧹 Limpar Alunos Antigos
+            </Button>
           </div>
         </div>
 
