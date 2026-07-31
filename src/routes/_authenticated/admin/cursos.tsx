@@ -564,6 +564,65 @@ function DuplicateCourseDialog({
   );
 }
 
+function DeleteCourseDialog({
+  courseTitle,
+  onConfirm,
+  isLoading,
+}: {
+  courseTitle: string;
+  onConfirm: () => void;
+  isLoading: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold"
+        >
+          <Trash2 className="mr-1.5 h-4 w-4" />
+          Excluir
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Excluir Curso / Protocolo</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <p className="text-sm">
+            Tem certeza que deseja excluir <strong>{courseTitle}</strong>? Esta ação não poderá ser
+            desfeita.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Serão removidos também os ciclos, videoaulas, materiais, metas, questões, simulados,
+            matrículas e progressos que pertencem exclusivamente a este protocolo.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isLoading}
+              onClick={() => {
+                onConfirm();
+                setOpen(false);
+              }}
+            >
+              {isLoading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Excluir definitivamente
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+
 function EditorCard({
   title,
   sub,
