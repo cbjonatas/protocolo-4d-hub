@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { saveRegisteredStudent, isStudentBlocked } from "@/lib/user-registry";
+import { saveRegisteredStudent, isStudentBlocked, getRegisteredStudents } from "@/lib/user-registry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const authSearchSchema = z.object({
   tab: z.enum(["signin", "signup"]).optional(),
   blocked: z.string().optional(),
+  unapproved: z.string().optional(),
 });
 
 export const Route = createFileRoute("/auth")({
@@ -74,6 +75,12 @@ function AuthPage() {
           </div>
         </Link>
 
+        {search.unapproved === "1" && (
+          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/15 p-4 text-center text-xs font-bold text-amber-400">
+            ⚠️ ACESSO NÃO AUTORIZADO: Seu usuário ainda não possui cadastro ativo no Painel de Gestão do Administrador. Entre em contato com o suporte para solicitar a liberação do seu acesso.
+          </div>
+        )}
+
         {search.blocked === "1" && (
           <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/15 p-4 text-center text-xs font-bold text-destructive">
             🔒 ACESSO BLOQUEADO: Sua conta foi temporariamente desativada pelo administrador. Entre em contato com a equipe de suporte.
@@ -128,14 +135,26 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       return;
     }
 
-    // Check DB profiles.is_blocked
+    // Check DB profiles and localStudent registry for admin management registration
     const { data: prof } = await supabase
       .from("profiles")
-      .select("is_blocked")
+      .select("id, is_blocked")
       .eq("email", parsed.data.email)
       .maybeSingle();
 
-    if (prof?.is_blocked || isStudentBlocked(parsed.data.email)) {
+    const localStudent = getRegisteredStudents().find(
+      (s: any) => s.email?.toLowerCase() === parsed.data.email.toLowerCase()
+    );
+
+    const isStudentEmail = parsed.data.email.toLowerCase() !== "admin@protocolo4d.com";
+
+    // Block sign in if not registered in admin management
+    if (isStudentEmail && !prof && !localStudent) {
+      toast.error("Seu usuário ainda não possui cadastro no Painel do Administrador. Entre em contato com o suporte.");
+      return;
+    }
+
+    if (prof?.is_blocked || localStudent?.is_blocked || isStudentBlocked(parsed.data.email)) {
       toast.error("Sua conta está bloqueada pelo administrador. Entre em contato com o suporte.");
       return;
     }
