@@ -256,13 +256,23 @@ export async function fetchFullCourse(slug: string) {
     .eq("slug", slug)
     .maybeSingle();
 
-  const activeCourse = course ?? {
-    id: "protocolo-4d-id",
-    slug: "protocolo-4d",
-    title: "Protocolo 4D",
-    description: "Curso preparatório completo de Informática com Jhon focado em aprovação em concursos públicos.",
-    is_active: true,
+  const defaultTitleMap: Record<string, string> = {
+    "protocolo-4d": "Protocolo 4D — Agosto",
+    "protocolo-4d-setembro": "Protocolo 4D — Setembro",
+    "protocolo-4d-outubro": "Protocolo 4D — Outubro",
   };
+
+  const activeCourse = course
+    ? course.title === "Protocolo 4D" || course.title === "PROTOCOLO 4D"
+      ? { ...course, title: "Protocolo 4D — Agosto" }
+      : course
+    : {
+        id: slug === "protocolo-4d" ? "protocolo-4d-id" : `protocolo-${slug}-id`,
+        slug: slug,
+        title: defaultTitleMap[slug] ?? `Protocolo 4D — ${slug}`,
+        description: "Curso preparatório completo de Informática com Jhon focado em aprovação em concursos públicos.",
+        is_active: slug === "protocolo-4d",
+      };
 
   const [cyclesRes, enrollmentRes, examsRes] = await Promise.all([
     supabase.from("cycles").select("*").eq("course_id", activeCourse.id).order("sort_order"),
