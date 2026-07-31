@@ -116,9 +116,9 @@ function AdminCourses() {
     onError: (e: any) => toast.error(e.message ?? "Erro ao atualizar status"),
   });
 
-  // Duplicate course mutation
+  // Duplicate course mutation (deep copy via secure DB routine)
   const duplicateCourseMutation = useMutation({
-    mutationFn: async ({ sourceCourseId, title }: { sourceCourseId: string; title: string }) => {
+    mutationFn: async ({ title }: { title: string }) => {
       const slug = title
         .toLowerCase()
         .normalize("NFD")
@@ -126,27 +126,61 @@ function AdminCourses() {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
-      const { error } = await supabase.rpc("duplicate_course", {
-        p_course_id: sourceCourseId,
+      // Ensure the source course really exists in the database
+      let sourceId: string | undefined = dbCourses.find((c: any) => c.slug === currentCourse.slug)?.id;
+      if (!sourceId) {
+        const { data: created, error: createErr } = await supabase
+          .from("courses")
+          .insert({
+            slug: currentCourse.slug,
+            title: currentCourse.title,
+            description: currentCourse.description ?? "",
+            is_active: !!currentCourse.is_active,
+          })
+          .select("id")
+          .single();
+        if (createErr) throw createErr;
+        sourceId = created.id;
+      }
+
+      const { data, error } = await supabase.rpc("duplicate_course", {
+        p_course_id: sourceId,
         p_new_title: title,
         p_new_slug: slug,
       });
-      if (error) {
-        await supabase.from("courses").insert({
-          slug,
-          title,
-          description: currentCourse.description ?? "",
-          is_active: false,
-        });
-      }
-      setSelectedSlug(slug);
+      if (error) throw error;
+
+      const { data: newCourse } = await supabase
+        .from("courses")
+        .select("slug")
+        .eq("id", data as unknown as string)
+        .maybeSingle();
+      return newCourse?.slug ?? slug;
     },
-    onSuccess: () => {
+    onSuccess: (newSlug) => {
+      setSelectedSlug(newSlug);
       invalidate();
-      toast.success("Novo Protocolo Mensal duplicado com sucesso em Rascunho!");
+      toast.success("Protocolo duplicado com sucesso (em Rascunho)!");
     },
     onError: (e: any) => toast.error(e.message ?? "Erro ao duplicar protocolo"),
   });
+
+  // Delete course mutation (removes course + exclusive content)
+  const deleteCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      const { error } = await supabase.rpc("delete_course", { p_course_id: courseId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setSelectedSlug("");
+      invalidate();
+      toast.success("Curso/Protocolo excluído com sucesso.");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro ao excluir protocolo"),
+  });
+
+  const currentDbCourse = dbCourses.find((c: any) => c.slug === activeSlug);
+
 
   const displayCycles = courseData?.cycles ?? [];
 
