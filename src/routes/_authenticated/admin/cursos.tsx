@@ -514,7 +514,7 @@ function DuplicateCourseDialog({
   isLoading: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState(`${currentCourse.title} — Cópia`);
+  const [title, setTitle] = useState(`${currentCourse.title} - CÓPIA`);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
