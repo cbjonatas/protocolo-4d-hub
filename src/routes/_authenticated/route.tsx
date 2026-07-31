@@ -15,25 +15,38 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/auth" });
     }
 
-    // If visiting student routes, verify student is not blocked
+    const email = data.user.email?.toLowerCase() ?? "";
+
+    // If visiting student routes, verify student is NOT blocked in Supabase DB or LocalStorage
     if (!location.pathname.startsWith("/admin")) {
-      const email = data.user.email ?? "";
-      if (isStudentBlocked(email) || isStudentBlocked(data.user.id)) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_blocked")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      const isBlockedInDb = profile?.is_blocked === true;
+      const isBlockedInLocal = isStudentBlocked(email) || isStudentBlocked(data.user.id);
+
+      if (isBlockedInDb || isBlockedInLocal) {
         await supabase.auth.signOut();
-        throw redirect({ to: "/auth" });
+        throw redirect({ to: "/auth", search: { blocked: "1" } });
       }
     }
 
     // If visiting admin routes, verify admin role explicitly
     if (location.pathname.startsWith("/admin")) {
-      const email = data.user.email?.toLowerCase() ?? "";
+      if (email === "professorjonatasg@gmail.com") {
+        throw redirect({ to: "/admin-login" });
+      }
+
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", data.user.id)
         .eq("role", "admin");
       const isAdmin =
-        (roles && roles.length > 0) || email.includes("admin") || email.startsWith("jhon");
+        email === "admin@protocolo4d.com" || (roles && roles.length > 0);
       if (!isAdmin) {
         throw redirect({ to: "/admin-login" });
       }

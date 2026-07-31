@@ -33,12 +33,20 @@ async function fetchMyCourses() {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return [];
   
-  // Query all courses/protocols (active and draft/locked)
+  // 1. Query all courses/protocols (active and draft/locked)
   const { data: courses } = await supabase
     .from("courses")
     .select("*")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
+
+  // 2. Query logged in user's active enrollments
+  const { data: userEnrollments } = await supabase
+    .from("enrollments")
+    .select("course_id")
+    .eq("user_id", u.user.id);
+
+  const enrolledCourseIds = new Set((userEnrollments ?? []).map((e) => e.course_id));
 
   let list = [...(courses ?? [])];
 
@@ -83,7 +91,17 @@ async function fetchMyCourses() {
       list.push(d as any);
     }
   }
-  return list;
+
+  return list.map((c) => {
+    // August course (protocolo-4d / protocolo-agosto) is active by default for logged in students.
+    // Subsequent months (Setembro, Outubro...) require explicit enrollment from the admin!
+    const isAugustDefault = c.slug === "protocolo-4d" || c.id === "protocolo-agosto";
+    const isEnrolled = isAugustDefault || enrolledCourseIds.has(c.id);
+    return {
+      ...c,
+      is_enrolled: isEnrolled,
+    };
+  });
 }
 
 function Dashboard() {
@@ -143,6 +161,7 @@ function Dashboard() {
                 description={c.description}
                 coverUrl={c.cover_url}
                 isActive={c.is_active}
+                isEnrolled={c.is_enrolled}
               />
             ))}
           </div>
@@ -159,6 +178,7 @@ function CourseCard({
   description,
   coverUrl,
   isActive,
+  isEnrolled,
 }: {
   courseId: string;
   slug: string;
@@ -166,11 +186,14 @@ function CourseCard({
   description: string;
   coverUrl?: string;
   isActive?: boolean;
+  isEnrolled?: boolean;
 }) {
+  const isUnlocked = !!isActive && !!isEnrolled;
+
   const { data } = useQuery({
     queryKey: ["course-full", slug],
     queryFn: () => fetchFullCourse(slug),
-    enabled: !!isActive,
+    enabled: isUnlocked,
   });
 
   const stats = computeStats(data);
@@ -178,7 +201,7 @@ function CourseCard({
   return (
     <div
       className={`group overflow-hidden rounded-2xl tactical-card shadow-elegant transition-all duration-300 ${
-        isActive ? "hover:border-gold hover:shadow-glow" : "border-border/40 opacity-85 hover:opacity-100"
+        isUnlocked ? "hover:border-gold hover:shadow-glow" : "border-border/40 opacity-85 hover:opacity-100"
       }`}
     >
       <div className="relative aspect-video overflow-hidden bg-gradient-police-blue">
@@ -191,7 +214,7 @@ function CourseCard({
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-hero">
             <div className="text-center p-4">
-              {isActive ? (
+              {isUnlocked ? (
                 <Trophy className="mx-auto h-12 w-12 text-gold animate-bounce" />
               ) : (
                 <Lock className="mx-auto h-12 w-12 text-muted-foreground/60" />
@@ -206,22 +229,27 @@ function CourseCard({
           </div>
         )}
 
-        {/* Lock overlay for inactive courses */}
-        {!isActive && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4">
-            <div className="h-10 w-10 rounded-full bg-background/80 border border-gold/40 flex items-center justify-center mb-2 shadow-glow">
+        {/* Lock overlay for locked or non-enrolled courses */}
+        {!isUnlocked && (
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4">
+            <div className="h-10 w-10 rounded-full bg-background/90 border border-gold/40 flex items-center justify-center mb-2 shadow-glow">
               <Lock className="h-5 w-5 text-gold" />
             </div>
             <span className="text-xs font-extrabold uppercase tracking-widest text-foreground">
-              LIBERA EM BREVE
+              {!isEnrolled ? "MATRÍCULA NÃO ATIVA 🔒" : "LIBERA EM BREVE 🔒"}
             </span>
+            {!isEnrolled && (
+              <span className="text-[10px] text-muted-foreground mt-1 max-w-[200px]">
+                Solicite a liberação deste mês ao administrador
+              </span>
+            )}
           </div>
         )}
 
         {/* Top Status Badge */}
-        {isActive ? (
+        {isUnlocked ? (
           <div className="absolute top-3 right-3 rounded-md bg-emerald-500 text-black px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest shadow-md">
-            MÊS VIGENTE
+            MÊS ATIVO
           </div>
         ) : (
           <div className="absolute top-3 right-3 rounded-md bg-background/90 border border-border text-muted-foreground px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest shadow-md flex items-center gap-1">
@@ -234,7 +262,7 @@ function CourseCard({
         <h3 className="font-display text-lg font-bold tracking-wider text-foreground">{title}</h3>
         <p className="mt-1 line-clamp-2 text-xs font-sans text-muted-foreground">{description}</p>
 
-        {isActive ? (
+        {isUnlocked ? (
           <>
             <div className="mt-5 rounded-xl border border-gold/20 bg-background/60 p-3.5">
               <div className="mb-2 flex justify-between text-xs font-bold uppercase tracking-wider">
@@ -260,16 +288,17 @@ function CourseCard({
               className="mt-5 w-full bg-gradient-gold text-black font-extrabold uppercase tracking-wider shadow-glow hover:brightness-110 h-11"
             >
               <Link to="/curso/$slug" params={{ slug }}>
-                ACESSAR CURSO <ArrowRight className="ml-2 h-4 w-4" />
+                ACESSAR CURSO <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
           </>
         ) : (
           <Button
             disabled
-            className="mt-5 w-full bg-muted/60 text-muted-foreground font-extrabold uppercase tracking-wider h-11 border border-border cursor-not-allowed"
+            variant="outline"
+            className="mt-5 w-full border-border/60 text-muted-foreground font-bold uppercase tracking-wider h-11 cursor-not-allowed"
           >
-            <Lock className="mr-2 h-4 w-4" /> LIBERA EM BREVE
+            <Lock className="mr-1.5 h-4 w-4" /> BLOQUEADO — MATRICULE-SE 🔒
           </Button>
         )}
       </div>

@@ -14,13 +14,14 @@ export const Route = createFileRoute("/admin-login")({
     const { data: u } = await supabase.auth.getUser();
     if (u.user) {
       const email = u.user.email?.toLowerCase() ?? "";
+      if (email === "professorjonatasg@gmail.com") return;
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", u.user.id)
         .eq("role", "admin");
       const isAdmin =
-        (roles && roles.length > 0) || email.includes("admin") || email.startsWith("jhon");
+        email === "admin@protocolo4d.com" || (roles && roles.length > 0);
       if (isAdmin) throw redirect({ to: "/admin" });
     }
   },
@@ -58,13 +59,19 @@ function AdminLoginPage() {
     }
 
     const email = data.user.email?.toLowerCase() ?? "";
+    if (email === "professorjonatasg@gmail.com") {
+      toast.error("Esta conta não possui privilégios de Administrador.");
+      await supabase.auth.signOut();
+      return;
+    }
+
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", data.user.id)
       .eq("role", "admin");
     const isAdmin =
-      (roles && roles.length > 0) || email.includes("admin") || email.startsWith("jhon");
+      email === "admin@protocolo4d.com" || (roles && roles.length > 0);
 
     if (!isAdmin) {
       toast.error("Esta conta não possui privilégios de Administrador.");

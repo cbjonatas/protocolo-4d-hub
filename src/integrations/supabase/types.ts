@@ -342,6 +342,7 @@ export type Database = {
           email: string;
           full_name: string;
           id: string;
+          is_blocked: boolean;
           updated_at: string;
           whatsapp: string | null;
         };
@@ -350,6 +351,7 @@ export type Database = {
           email: string;
           full_name?: string;
           id: string;
+          is_blocked?: boolean;
           updated_at?: string;
           whatsapp?: string | null;
         };
@@ -358,6 +360,7 @@ export type Database = {
           email?: string;
           full_name?: string;
           id?: string;
+          is_blocked?: boolean;
           updated_at?: string;
           whatsapp?: string | null;
         };

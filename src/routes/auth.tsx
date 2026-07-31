@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const authSearchSchema = z.object({
   tab: z.enum(["signin", "signup"]).optional(),
+  blocked: z.string().optional(),
 });
 
 export const Route = createFileRoute("/auth")({
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/auth")({
           .eq("user_id", u.user.id)
           .eq("role", "admin");
         const isAdmin =
-          (roles && roles.length > 0) || email.includes("admin") || email.startsWith("jhon");
+          email === "admin@protocolo4d.com" || (roles && roles.length > 0);
         if (isAdmin) throw redirect({ to: "/admin" });
       }
       throw redirect({ to: "/dashboard" });
@@ -72,6 +73,12 @@ function AuthPage() {
             </div>
           </div>
         </Link>
+
+        {search.blocked === "1" && (
+          <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/15 p-4 text-center text-xs font-bold text-destructive">
+            🔒 ACESSO BLOQUEADO: Sua conta foi temporariamente desativada pelo administrador. Entre em contato com a equipe de suporte.
+          </div>
+        )}
 
         <div className="rounded-2xl tactical-card p-6 md:p-8 shadow-elegant">
           <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
@@ -121,7 +128,14 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       return;
     }
 
-    if (isStudentBlocked(parsed.data.email)) {
+    // Check DB profiles.is_blocked
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("is_blocked")
+      .eq("email", parsed.data.email)
+      .maybeSingle();
+
+    if (prof?.is_blocked || isStudentBlocked(parsed.data.email)) {
       toast.error("Sua conta está bloqueada pelo administrador. Entre em contato com o suporte.");
       return;
     }
@@ -133,6 +147,21 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       toast.error("E-mail ou senha incorretos.");
       return;
     }
+
+    // Verify user profile block status
+    const { data: userProf } = await supabase
+      .from("profiles")
+      .select("is_blocked")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (userProf?.is_blocked) {
+      setLoading(false);
+      await supabase.auth.signOut();
+      toast.error("Sua conta foi desativada pelo administrador. Entre em contato com o suporte.");
+      return;
+    }
+
     // Block admin accounts from using student login
     const email = data.user.email?.toLowerCase() ?? "";
     const { data: roles } = await supabase
@@ -141,7 +170,7 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       .eq("user_id", data.user.id)
       .eq("role", "admin");
     const isAdmin =
-      (roles && roles.length > 0) || email.includes("admin") || email.startsWith("jhon");
+      email === "admin@protocolo4d.com" || (roles && roles.length > 0);
     setLoading(false);
     if (isAdmin) {
       await supabase.auth.signOut();

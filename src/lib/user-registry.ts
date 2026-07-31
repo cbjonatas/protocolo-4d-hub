@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export interface RegisteredStudent {
   id: string;
   full_name: string;
@@ -45,6 +47,9 @@ export function getRegisteredStudents(): RegisteredStudent[] {
 
       // Exclude admin or synthetic placeholder emails
       if (email.includes("admin") || email.startsWith("jhon") || name.includes("administrador")) {
+        return false;
+      }
+      if (email === "professorjonatasg@gmail.com") {
         return false;
       }
       if (email.startsWith("aluno_") && email.endsWith("@plataforma.com")) {
@@ -111,6 +116,16 @@ export function updateStudentStatus(studentIdOrEmail: string, isBlocked: boolean
       current[idx].updated_at = new Date().toISOString();
       localStorage.setItem("p4d_all_registered_students", JSON.stringify(current));
     }
+
+    // Sync block status to Supabase profiles table
+    supabase
+      .from("profiles")
+      .update({ is_blocked: isBlocked })
+      .or(`id.eq.${studentIdOrEmail},email.eq.${studentIdOrEmail}`)
+      .then(({ error }) => {
+        if (error) console.warn("Could not sync block status to profiles table:", error.message);
+      });
+
     return current;
   } catch (e) {
     console.error("Error updating student status:", e);
