@@ -90,9 +90,12 @@ function ProgressPage() {
         <MiniStat icon={Percent} label="Aproveitamento" value={`${acc}%`} className="text-gold" />
       </div>
 
-      <h2 className="mt-10 font-display text-2xl font-bold">Ciclos</h2>
+      <h2 className="mt-10 font-display text-2xl font-bold">Ciclo Vigente</h2>
       <div className="mt-4 space-y-3">
-        {data.cycles.map((c) => {
+        {(data.cycles.filter((c: any) => c.status === "ativo").length > 0
+          ? data.cycles.filter((c: any) => c.status === "ativo")
+          : [data.cycles[0]]
+        ).map((c) => {
           const cLessons = data.lessons.filter((l) => l.cycle_id === c.id);
           const cGoals = data.goals.filter((g) => g.cycle_id === c.id);
           const cExams = data.exams.filter((e) => e.number === c.number);
@@ -103,12 +106,16 @@ function ProgressPage() {
             cExams.filter((e) => data.examProgress.has(e.id)).length;
           const p = cT ? Math.round((cD / cT) * 100) : 0;
           return (
-            <div key={c.id} className="rounded-xl border border-border bg-card p-4">
+            <div key={c.id} className="rounded-xl border border-gold/30 bg-card p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="font-semibold">
-                  Ciclo {c.number} — {c.title}
+                <div className="font-semibold flex items-center gap-2">
+                  <span>Ciclo {c.number} — {c.title}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    ATIVO
+                  </span>
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm font-bold text-gold">
                   {cD}/{cT} · {p}%
                 </div>
               </div>
