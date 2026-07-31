@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { fetchFullCourse, computeStatus, formatReleaseDate, type Status } from "@/lib/course-data";
 
 export const Route = createFileRoute("/_authenticated/curso/$slug/")({
@@ -38,6 +39,28 @@ function CoursePage() {
         Carregando curso...
       </div>
     );
+
+  const isAugustDefault = slug === "protocolo-4d";
+  const isLockedForStudent = !isAugustDefault && !data.enrollment && !data.course.is_active;
+
+  if (isLockedForStudent) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center max-w-lg">
+        <div className="tactical-card rounded-2xl p-8 border border-gold/30 shadow-glow">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/15 text-gold border border-gold/40 mb-4">
+            <Lock className="h-7 w-7" />
+          </div>
+          <h2 className="font-display text-2xl font-bold text-foreground">Acesso Bloqueado</h2>
+          <p className="mt-2 text-sm text-muted-foreground font-sans">
+            Você ainda não possui matrícula ativa para o <strong>{data.course.title}</strong>. Entre em contato com o suporte ou solicite a renovação para liberar este mês.
+          </p>
+          <Button asChild className="mt-6 w-full bg-gradient-gold text-black font-extrabold uppercase">
+            <Link to="/dashboard">← Voltar para Meus Cursos</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const enrolledAt = data.enrollment?.enrolled_at;
   const displayCycles = data.cycles;
