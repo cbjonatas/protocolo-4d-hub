@@ -40,15 +40,20 @@ function CoursePage() {
     );
 
   const enrolledAt = data.enrollment?.enrolled_at;
+  const displayCycles = data.cycles;
+
   const totalItems = data.lessons.length + data.goals.length + data.exams.length;
-  const doneItems = data.lessonProgress.size + data.goalProgress.size + data.examProgress.size;
+  const doneItems =
+    data.lessons.filter((l) => data.lessonProgress.has(l.id)).length +
+    data.goals.filter((g) => data.goalProgress.has(g.id)).length +
+    data.exams.filter((e) => data.examProgress.has(e.id)).length;
   const percent = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="rounded-2xl tactical-card p-6 md:p-8 shadow-elegant relative overflow-hidden">
         <div className="text-xs font-extrabold uppercase tracking-widest text-gold mb-2 flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-gold animate-ping" /> CURSO PREPARATÓRIO
+          <span className="h-2 w-2 rounded-full bg-gold animate-ping" /> PROTOCOLO MENSAL — ÁREA DO ALUNO
         </div>
         <h1 className="font-display text-3xl font-extrabold md:text-5xl text-foreground tracking-wide">
           {data.course.title}
@@ -66,8 +71,8 @@ function CoursePage() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        {data.cycles.map((cycle) => {
+      <div className="mt-8 grid gap-6 lg:grid-cols-1">
+        {displayCycles.map((cycle) => {
           const cLessons = data.lessons.filter((l) => l.cycle_id === cycle.id);
           const cGoals = data.goals.filter((g) => g.cycle_id === cycle.id);
           const cExams = data.exams.filter((e) => e.number === cycle.number);
@@ -75,17 +80,23 @@ function CoursePage() {
           return (
             <div
               key={cycle.id}
-              className="rounded-2xl tactical-card p-6 shadow-elegant hover:border-gold/60 transition-all"
+              className="rounded-2xl tactical-card p-6 shadow-elegant hover:border-gold/60 transition-all border-gold/30"
             >
               <div className="flex items-start justify-between gap-3 border-b border-gold/20 pb-4">
                 <div>
-                  <div className="text-xs font-extrabold uppercase tracking-widest text-gold">
-                    CICLO {cycle.number}D
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-gold">
+                      CICLO {cycle.number}D
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      MÊS VIGENTE
+                    </span>
                   </div>
-                  <h2 className="mt-1 font-display text-xl font-extrabold tracking-wide text-foreground">
+                  <h2 className="mt-1 font-display text-xl md:text-2xl font-extrabold tracking-wide text-foreground">
                     {cycle.title}
                   </h2>
-                  <p className="mt-1 text-xs font-sans text-muted-foreground">
+                  <p className="mt-1 text-xs md:text-sm font-sans text-muted-foreground">
                     {cycle.description}
                   </p>
                 </div>
