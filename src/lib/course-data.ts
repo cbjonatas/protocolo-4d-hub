@@ -38,6 +38,7 @@ export const DEFAULT_CYCLES = [
     title: "Fundamentos de Informática & Hardware",
     description: "Conceitos básicos, componentes do computador e periféricos.",
     sort_order: 1,
+    status: "ativo" as const,
     created_at: new Date().toISOString(),
   },
   {
@@ -47,6 +48,7 @@ export const DEFAULT_CYCLES = [
     title: "Sistemas Operacionais & Arquivos",
     description: "Windows, Linux, gerenciamento de arquivos e atalhos essenciais.",
     sort_order: 2,
+    status: "arquivado" as const,
     created_at: new Date().toISOString(),
   },
   {
@@ -56,6 +58,7 @@ export const DEFAULT_CYCLES = [
     title: "Redes de Computadores & Internet",
     description: "Protocolos IP, TCP/UDP, navegadores e serviços web.",
     sort_order: 3,
+    status: "arquivado" as const,
     created_at: new Date().toISOString(),
   },
   {
@@ -65,6 +68,7 @@ export const DEFAULT_CYCLES = [
     title: "Segurança da Informação & Malware",
     description: "Práticas de segurança, vírus, ransomware, firewall e criptografia.",
     sort_order: 4,
+    status: "arquivado" as const,
     created_at: new Date().toISOString(),
   },
 ];
