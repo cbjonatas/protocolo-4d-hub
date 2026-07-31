@@ -233,11 +233,18 @@ function AdminCourses() {
 
             <DuplicateCourseDialog
               currentCourse={currentCourse}
-              onDuplicate={(title) =>
-                duplicateCourseMutation.mutate({ sourceCourseId: currentCourse.id, title })
-              }
+              onDuplicate={(title) => duplicateCourseMutation.mutate({ title })}
               isLoading={duplicateCourseMutation.isPending}
             />
+
+            {currentDbCourse && (
+              <DeleteCourseDialog
+                courseTitle={currentCourse.title}
+                isLoading={deleteCourseMutation.isPending}
+                onConfirm={() => deleteCourseMutation.mutate(currentDbCourse.id)}
+              />
+            )}
+
           </div>
         </div>
 
