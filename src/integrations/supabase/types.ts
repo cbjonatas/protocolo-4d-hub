@@ -52,6 +52,7 @@ export type Database = {
           id: string;
           number: number;
           sort_order: number;
+          status: "ativo" | "rascunho" | "arquivado";
           title: string;
         };
         Insert: {
@@ -61,6 +62,7 @@ export type Database = {
           id?: string;
           number: number;
           sort_order?: number;
+          status?: "ativo" | "rascunho" | "arquivado";
           title: string;
         };
         Update: {
@@ -70,6 +72,7 @@ export type Database = {
           id?: string;
           number?: number;
           sort_order?: number;
+          status?: "ativo" | "rascunho" | "arquivado";
           title?: string;
         };
         Relationships: [
@@ -602,6 +605,26 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      activate_cycle: {
+        Args: {
+          p_cycle_id: string;
+        };
+        Returns: void;
+      };
+      duplicate_cycle: {
+        Args: {
+          p_cycle_id: string;
+        };
+        Returns: string;
+      };
+      duplicate_course: {
+        Args: {
+          p_course_id: string;
+          p_new_title: string;
+          p_new_slug: string;
+        };
+        Returns: string;
+      };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];
