@@ -14,6 +14,7 @@ import {
   Lock,
   Key,
   Trophy,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -293,31 +294,14 @@ function AdminStudents() {
             </p>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
-            <div className="relative w-full md:w-72">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, e-mail..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-background/80"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (window.confirm("Deseja realmente limpar a base de alunos antigos? Todos os novos cadastros criados a partir de agora continuarão aparecendo normalmente no painel.")) {
-                  clearAllRegisteredStudents();
-                  toast.success("Base de alunos antigos limpa com sucesso!");
-                  qc.invalidateQueries({ queryKey: ["admin-students-full"] });
-                }
-              }}
-              className="border-destructive/40 text-destructive hover:bg-destructive/15 text-xs font-bold shrink-0"
-              title="Limpar registros antigos de teste"
-            >
-              🧹 Limpar Alunos Antigos
-            </Button>
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, e-mail ou WhatsApp..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-background/80"
+            />
           </div>
         </div>
 
@@ -427,6 +411,39 @@ function StudentRow({
     onError: (e: any) => toast.error(e.message || "Erro ao atualizar matrícula."),
   });
 
+  const deleteStudentMutation = useMutation({
+    mutationFn: async () => {
+      // 1. Delete student data across all tables in Supabase DB
+      await supabase.from("enrollments").delete().eq("user_id", student.id);
+      await supabase.from("lesson_progress").delete().eq("user_id", student.id);
+      await supabase.from("goal_progress").delete().eq("user_id", student.id);
+      await supabase.from("exam_progress").delete().eq("user_id", student.id);
+      await supabase.from("user_roles").delete().eq("user_id", student.id);
+      await supabase
+        .from("profiles")
+        .delete()
+        .or(`id.eq.${student.id},email.eq.${student.email}`);
+
+      // 2. Delete from localStorage
+      if (typeof window !== "undefined") {
+        const raw = localStorage.getItem("p4d_all_registered_students");
+        if (raw) {
+          const list = JSON.parse(raw).filter(
+            (s: any) => s.id !== student.id && s.email?.toLowerCase() !== student.email?.toLowerCase()
+          );
+          localStorage.setItem("p4d_all_registered_students", JSON.stringify(list));
+        }
+      }
+    },
+    onSuccess: () => {
+      toast.success(`Aluno ${student.full_name || student.email} removido da base com sucesso!`);
+      qc.invalidateQueries({ queryKey: ["admin-students-full"] });
+      setOpen(false);
+      onUpdated();
+    },
+    onError: (e: any) => toast.error(e.message || "Erro ao remover aluno."),
+  });
+
   function handleToggleBlock() {
     const nextStatus = !student.is_blocked;
     updateStudentStatus(student.id || student.email, nextStatus);
@@ -531,7 +548,7 @@ function StudentRow({
                 </div>
               </div>
 
-              {/* Account Controls Card: Block/Unblock & Password */}
+              {/* Account Controls Card: Block/Unblock, Password & Delete */}
               <div className="rounded-xl border border-border bg-card p-4 space-y-3">
                 <div className="text-xs font-bold uppercase tracking-wider text-gold flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
@@ -551,13 +568,31 @@ function StudentRow({
                   >
                     {student.is_blocked ? (
                       <>
-                        <UserCheck className="mr-1.5 h-4 w-4" /> Liberar Acesso do Aluno
+                        <UserCheck className="mr-1.5 h-4 w-4" /> Liberar Acesso
                       </>
                     ) : (
                       <>
-                        <ShieldAlert className="mr-1.5 h-4 w-4" /> Bloquear Acesso do Aluno
+                        <ShieldAlert className="mr-1.5 h-4 w-4" /> Bloquear Acesso
                       </>
                     )}
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE o aluno "${student.full_name || student.email}" da base de dados?`
+                        )
+                      ) {
+                        deleteStudentMutation.mutate();
+                      }
+                    }}
+                    disabled={deleteStudentMutation.isPending}
+                    className="border-destructive/60 text-destructive hover:bg-destructive/15 text-xs font-bold"
+                  >
+                    <Trash2 className="mr-1.5 h-4 w-4" /> Excluir Aluno
                   </Button>
                 </div>
 
