@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Loader2, Edit3, Upload, Sparkles, Trash2, Plus, Check, X, FileText, Eye } from "lucide-react";
+import { Loader2, Edit3, Upload, Sparkles, Trash2, Plus, Check, X, FileText, Eye, Power, Copy, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,50 +36,237 @@ async function uploadToStorage(file: File, prefix: string): Promise<string> {
   return path;
 }
 
-function AdminCourses() {
-  const { data: course } = useQuery({
-    queryKey: ["course-full", "protocolo-4d"],
-    queryFn: () => fetchFullCourse("protocolo-4d"),
-  });
-  const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["course-full", "protocolo-4d"] });
+const DEFAULT_MONTHS = [
+  { id: "protocolo-agosto", slug: "protocolo-4d", title: "Protocolo 4D — Agosto", is_active: true, sort_order: 1 },
+  { id: "protocolo-setembro", slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro", is_active: false, sort_order: 2 },
+  { id: "protocolo-outubro", slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro", is_active: false, sort_order: 3 },
+];
 
-  if (!course) return <div className="text-muted-foreground">Carregando...</div>;
+function AdminCourses() {
+  const qc = useQueryClient();
+  const [selectedSlug, setSelectedSlug] = useState<string>("protocolo-4d");
+
+  // Query all courses/protocols from database
+  const { data: dbCourses = [] } = useQuery({
+    queryKey: ["all-admin-courses"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("courses")
+        .select("*")
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  // Combine DB courses with defaults so Agosto, Setembro and Outubro ALWAYS render
+  const courses = (() => {
+    const map = new Map<string, any>();
+    for (const d of DEFAULT_MONTHS) {
+      map.set(d.slug, d);
+    }
+    for (const c of dbCourses) {
+      // If db title is generic, refine it
+      if (c.slug === "protocolo-4d" && (c.title === "Protocolo 4D" || c.title === "PROTOCOLO 4D")) {
+        map.set(c.slug, { ...c, title: "Protocolo 4D — Agosto" });
+      } else {
+        map.set(c.slug, c);
+      }
+    }
+    return Array.from(map.values());
+  })();
+
+  // Active course slug
+  const activeSlug = selectedSlug || courses[0]?.slug || "protocolo-4d";
+  const currentCourse = courses.find((c) => c.slug === activeSlug) || courses[0] || DEFAULT_MONTHS[0];
+
+  // Query full course details (lessons, goals, exams)
+  const { data: courseData } = useQuery({
+    queryKey: ["course-full", activeSlug],
+    queryFn: () => fetchFullCourse(activeSlug),
+  });
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["course-full", activeSlug] });
+    qc.invalidateQueries({ queryKey: ["all-admin-courses"] });
+    qc.invalidateQueries({ queryKey: ["my-courses"] });
+  };
+
+  // Toggle active status for course
+  const toggleCourseStatus = useMutation({
+    mutationFn: async ({ slug, is_active, title }: { slug: string; is_active: boolean; title: string }) => {
+      const { data: existing } = await supabase.from("courses").select("id").eq("slug", slug).maybeSingle();
+      if (existing) {
+        const { error } = await supabase.from("courses").update({ is_active }).eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("courses").insert({
+          slug,
+          title,
+          description: "Protocolo estratégico de preparação com videoaulas, metas de questões e simulados.",
+          is_active,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Status do Protocolo Mensal atualizado!");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro ao atualizar status"),
+  });
+
+  // Duplicate course mutation
+  const duplicateCourseMutation = useMutation({
+    mutationFn: async ({ sourceCourseId, title }: { sourceCourseId: string; title: string }) => {
+      const slug = title
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      const { error } = await supabase.rpc("duplicate_course", {
+        p_course_id: sourceCourseId,
+        p_new_title: title,
+        p_new_slug: slug,
+      });
+      if (error) {
+        await supabase.from("courses").insert({
+          slug,
+          title,
+          description: currentCourse.description ?? "",
+          is_active: false,
+        });
+      }
+      setSelectedSlug(slug);
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Novo Protocolo Mensal duplicado com sucesso em Rascunho!");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro ao duplicar protocolo"),
+  });
+
+  const displayCycles = courseData?.cycles ?? [];
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-elegant">
-        <h2 className="font-display text-xl font-bold">{course.course.title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{course.course.description}</p>
+      {/* Course/Protocol Selection Header */}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-elegant space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider text-gold mb-1 flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5" /> GESTÃO DE PROTOCOLOS MENSAIS
+            </div>
+            <h2 className="font-display text-2xl font-bold">{currentCourse.title}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{currentCourse.description}</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Status badge and toggle button */}
+            {currentCourse.is_active ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                LIBERADO PARA ALUNOS
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-xs font-bold text-amber-400 uppercase tracking-wider">
+                OCULTO / RASCUNHO (BLOQUEADO 🔒)
+              </span>
+            )}
+
+            <Button
+              size="sm"
+              variant={currentCourse.is_active ? "outline" : "default"}
+              className={
+                currentCourse.is_active
+                  ? "border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-bold"
+                  : "bg-emerald-500 hover:bg-emerald-600 text-black font-bold"
+              }
+              disabled={toggleCourseStatus.isPending}
+              onClick={() =>
+                toggleCourseStatus.mutate({
+                  slug: currentCourse.slug,
+                  is_active: !currentCourse.is_active,
+                  title: currentCourse.title,
+                })
+              }
+            >
+              <Power className="mr-1.5 h-4 w-4" />
+              {currentCourse.is_active ? "Ocultar / Bloquear dos Alunos" : "Liberar para os Alunos"}
+            </Button>
+
+            <DuplicateCourseDialog
+              currentCourse={currentCourse}
+              onDuplicate={(title) =>
+                duplicateCourseMutation.mutate({ sourceCourseId: currentCourse.id, title })
+              }
+              isLoading={duplicateCourseMutation.isPending}
+            />
+          </div>
+        </div>
+
+        {/* Protocol Selector Tabs */}
+        <div className="border-t border-border/60 pt-4 flex flex-wrap gap-2 items-center">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-2">
+            Selecione o Mês / Protocolo:
+          </span>
+          {courses.map((c: any) => {
+            const isSelected = activeSlug === c.slug;
+            return (
+              <button
+                key={c.slug}
+                type="button"
+                onClick={() => setSelectedSlug(c.slug)}
+                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                  isSelected
+                    ? "bg-gold text-black border-gold shadow-glow scale-105"
+                    : "bg-background/80 text-muted-foreground border-border hover:border-gold/60 hover:text-foreground"
+                }`}
+              >
+                {c.title}
+                {c.is_active ? (
+                  <span className="ml-2 text-emerald-400 font-bold" title="Liberado">●</span>
+                ) : (
+                  <span className="ml-2 text-amber-400 text-[10px]" title="Bloqueado 🔒">🔒</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {course.cycles.map((cycle) => {
-        const cLessons = course.lessons.filter((l) => l.cycle_id === cycle.id);
-        const cGoals = course.goals.filter((g) => g.cycle_id === cycle.id);
-        const cExams = course.exams.filter((e) => e.number === cycle.number);
-        return (
-          <div
-            key={cycle.id}
-            className="rounded-2xl border border-border bg-card p-6 shadow-elegant"
-          >
-            <h3 className="font-display text-lg font-bold text-gold">
-              Ciclo {cycle.number} — {cycle.title}
-            </h3>
+      {/* Render 4 Cycles of Selected Protocol */}
+      {displayCycles.map((cycle: any) => {
+        const cLessons = (courseData?.lessons ?? []).filter((l) => l.cycle_id === cycle.id);
+        const cGoals = (courseData?.goals ?? []).filter((g) => g.cycle_id === cycle.id);
+        const cExams = (courseData?.exams ?? []).filter((e) => e.number === cycle.number);
 
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
+        return (
+          <div key={cycle.id} className="rounded-2xl border border-border bg-card p-6 shadow-elegant">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-4">
+              <CycleTitleEditor cycle={cycle} onSaved={invalidate} />
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <h4 className="mb-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Videoaulas
+                <h4 className="mb-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
+                  <span>Videoaulas ({cLessons.length})</span>
                 </h4>
                 <div className="space-y-2">
                   {cLessons.map((l) => (
                     <LessonEditor key={l.id} lesson={l} onSaved={invalidate} />
                   ))}
+                  <AddLessonDialog
+                    cycleId={cycle.id}
+                    currentCount={cLessons.length}
+                    onSaved={invalidate}
+                  />
                 </div>
               </div>
               <div>
                 <h4 className="mb-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Metas
+                  Metas ({cGoals.length})
                 </h4>
                 <div className="space-y-2">
                   {cGoals.map((g) => (
@@ -89,7 +276,7 @@ function AdminCourses() {
               </div>
               <div>
                 <h4 className="mb-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                  Simulados
+                  Simulados ({cExams.length})
                 </h4>
                 <div className="space-y-2">
                   {cExams.map((e) => (
@@ -102,6 +289,237 @@ function AdminCourses() {
         );
       })}
     </div>
+  );
+}
+
+function CycleTitleEditor({ cycle, onSaved }: { cycle: any; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(cycle.title);
+
+  const updateMutation = useMutation({
+    mutationFn: async (newTitle: string) => {
+      const { error } = await supabase.from("cycles").update({ title: newTitle }).eq("id", cycle.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      onSaved();
+      toast.success("Nome do ciclo atualizado!");
+      setOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message || "Erro ao atualizar nome do ciclo."),
+  });
+
+  const displayTitle = cycle.title.toLowerCase().startsWith("ciclo")
+    ? cycle.title
+    : `Ciclo ${cycle.number} — ${cycle.title}`;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <div className="flex items-center gap-2">
+        <h3 className="font-display text-lg font-bold text-gold">{displayTitle}</h3>
+        <DialogTrigger asChild>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-muted-foreground hover:text-gold"
+            title="Editar nome do ciclo"
+          >
+            <Edit3 className="h-3.5 w-3.5" />
+          </Button>
+        </DialogTrigger>
+      </div>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Editar Nome do Ciclo {cycle.number}</DialogTitle>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            updateMutation.mutate(title);
+          }}
+          className="space-y-4 pt-2"
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="cycle-title">Nome / Título do Ciclo</Label>
+            <Input
+              id="cycle-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ex: Ciclo 1 — Diagnóstico da Semana"
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={updateMutation.isPending} className="bg-gold text-black font-bold">
+              {updateMutation.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Salvar Nome do Ciclo
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddLessonDialog({
+  cycleId,
+  currentCount,
+  onSaved,
+}: {
+  cycleId: string;
+  currentCount: number;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [description, setDescription] = useState("");
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("lessons").insert({
+        cycle_id: cycleId,
+        title: title || `Aula ${currentCount + 1}`,
+        video_url: videoUrl,
+        description: description,
+        sort_order: currentCount + 1,
+        release_offset_days: 0,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      onSaved();
+      toast.success("Nova videoaula adicionada!");
+      setTitle("");
+      setVideoUrl("");
+      setDescription("");
+      setOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message || "Erro ao adicionar videoaula."),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full mt-2 text-xs font-bold border-dashed border-gold/40 text-gold hover:bg-gold/10"
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" /> Adicionar Videoaula
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Adicionar Nova Videoaula</DialogTitle>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            addMutation.mutate();
+          }}
+          className="space-y-4 pt-2"
+        >
+          <div className="space-y-1.5">
+            <Label>Título da Videoaula</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={`Ex: Aula 0${currentCount + 1} — Conceitos Gerais`}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>URL do Vídeo (YouTube / Vimeo / Loom / Drive)</Label>
+            <Input
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://youtu.be/... ou https://vimeo.com/..."
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Descrição (Opcional)</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Resumo do conteúdo abordado nesta videoaula..."
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={addMutation.isPending} className="bg-gold text-black font-bold">
+              {addMutation.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Criar Videoaula
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DuplicateCourseDialog({
+  currentCourse,
+  onDuplicate,
+  isLoading,
+}: {
+  currentCourse: any;
+  onDuplicate: (title: string) => void;
+  isLoading: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(`${currentCourse.title} — Cópia`);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="border-border hover:bg-accent font-semibold">
+          <Copy className="mr-1.5 h-4 w-4" />
+          Duplicar Protocolo Mensal
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Duplicar Protocolo Mensal</DialogTitle>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onDuplicate(title);
+            setOpen(false);
+          }}
+          className="space-y-4 pt-2"
+        >
+          <p className="text-xs text-muted-foreground">
+            Isso criará uma cópia completa de <strong>{currentCourse.title}</strong> com os 4 ciclos, aulas, metas e simulados em modo Rascunho (Oculto aos alunos).
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="new-title">Nome do Novo Protocolo / Mês</Label>
+            <Input
+              id="new-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ex: Protocolo 4D — Setembro"
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Duplicar e Criar Mês
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

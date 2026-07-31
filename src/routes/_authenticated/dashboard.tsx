@@ -13,6 +13,7 @@ import {
   CheckCircle,
   Sparkles,
   Shield,
+  Lock,
 } from "lucide-react";
 import { fetchFullCourse } from "@/lib/course-data";
 import { useMe } from "@/components/app-shell";
@@ -31,16 +32,57 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 async function fetchMyCourses() {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return [];
-  const { data: enrolls } = await supabase
-    .from("enrollments")
-    .select("course_id, enrolled_at, courses(*)")
-    .eq("user_id", u.user.id);
-  return enrolls ?? [];
+  
+  // Query all courses/protocols (active and draft/locked)
+  const { data: courses } = await supabase
+    .from("courses")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  const existingSlugs = new Set((courses ?? []).map((c) => c.slug));
+  const defaults = [
+    {
+      id: "protocolo-agosto",
+      slug: "protocolo-4d",
+      title: "Protocolo 4D — Agosto",
+      description: "Um protocolo estratégico de preparação com videoaulas, metas de questões e simulados.",
+      cover_url: "",
+      is_active: true,
+      sort_order: 1,
+    },
+    {
+      id: "protocolo-setembro",
+      slug: "protocolo-4d-setembro",
+      title: "Protocolo 4D — Setembro",
+      description: "Protocolo estratégico do mês de Setembro com novas videoaulas, metas e simulados.",
+      cover_url: "",
+      is_active: false,
+      sort_order: 2,
+    },
+    {
+      id: "protocolo-outubro",
+      slug: "protocolo-4d-outubro",
+      title: "Protocolo 4D — Outubro",
+      description: "Protocolo estratégico do mês de Outubro focado na reta final de preparação.",
+      cover_url: "",
+      is_active: false,
+      sort_order: 3,
+    },
+  ];
+
+  const result = [...(courses ?? [])];
+  for (const d of defaults) {
+    if (!existingSlugs.has(d.slug)) {
+      result.push(d as any);
+    }
+  }
+  return result;
 }
 
 function Dashboard() {
   const { data: me } = useMe();
-  const { data: enrollments = [] } = useQuery({
+  const { data: courses = [] } = useQuery({
     queryKey: ["my-courses"],
     queryFn: fetchMyCourses,
   });
@@ -77,23 +119,24 @@ function Dashboard() {
 
       <section className="mb-10">
         <h2 className="mb-5 font-display text-xl font-bold tracking-wider flex items-center gap-2 text-foreground">
-          <Target className="h-5 w-5 text-gold" /> MEUS CURSOS
+          <Target className="h-5 w-5 text-gold" /> MEUS PROTOCOLOS & CURSOS
         </h2>
-        {enrollments.length === 0 ? (
+        {courses.length === 0 ? (
           <div className="tactical-card rounded-2xl p-10 text-center">
             <Shield className="mx-auto h-12 w-12 text-gold opacity-50 mb-3" />
-            <p className="text-muted-foreground font-sans">Você ainda não tem cursos ativos.</p>
+            <p className="text-muted-foreground font-sans">Você ainda não possui protocolos liberados.</p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {enrollments.map((e: any) => (
+            {courses.map((c: any) => (
               <CourseCard
-                key={e.course_id}
-                courseId={e.course_id}
-                slug={e.courses.slug}
-                title={e.courses.title}
-                description={e.courses.description}
-                coverUrl={e.courses.cover_url}
+                key={c.id}
+                courseId={c.id}
+                slug={c.slug}
+                title={c.title}
+                description={c.description}
+                coverUrl={c.cover_url}
+                isActive={c.is_active}
               />
             ))}
           </div>
@@ -109,22 +152,29 @@ function CourseCard({
   title,
   description,
   coverUrl,
+  isActive,
 }: {
   courseId: string;
   slug: string;
   title: string;
   description: string;
   coverUrl?: string;
+  isActive?: boolean;
 }) {
   const { data } = useQuery({
     queryKey: ["course-full", slug],
     queryFn: () => fetchFullCourse(slug),
+    enabled: !!isActive,
   });
 
   const stats = computeStats(data);
 
   return (
-    <div className="group overflow-hidden rounded-2xl tactical-card shadow-elegant transition-all duration-300 hover:border-gold hover:shadow-glow">
+    <div
+      className={`group overflow-hidden rounded-2xl tactical-card shadow-elegant transition-all duration-300 ${
+        isActive ? "hover:border-gold hover:shadow-glow" : "border-border/40 opacity-85 hover:opacity-100"
+      }`}
+    >
       <div className="relative aspect-video overflow-hidden bg-gradient-police-blue">
         {coverUrl ? (
           <img
@@ -135,8 +185,12 @@ function CourseCard({
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-hero">
             <div className="text-center p-4">
-              <Trophy className="mx-auto h-12 w-12 text-gold animate-bounce" />
-              <div className="mt-2 font-display text-2xl font-extrabold tracking-widest text-gold">
+              {isActive ? (
+                <Trophy className="mx-auto h-12 w-12 text-gold animate-bounce" />
+              ) : (
+                <Lock className="mx-auto h-12 w-12 text-muted-foreground/60" />
+              )}
+              <div className="mt-2 font-display text-xl font-extrabold tracking-widest text-gold">
                 {title}
               </div>
               <div className="mt-1 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
@@ -145,42 +199,73 @@ function CourseCard({
             </div>
           </div>
         )}
-        <div className="absolute top-3 right-3 rounded-md bg-gold px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-black shadow-md">
-          PROTOCOLO 4D
-        </div>
+
+        {/* Lock overlay for inactive courses */}
+        {!isActive && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4">
+            <div className="h-10 w-10 rounded-full bg-background/80 border border-gold/40 flex items-center justify-center mb-2 shadow-glow">
+              <Lock className="h-5 w-5 text-gold" />
+            </div>
+            <span className="text-xs font-extrabold uppercase tracking-widest text-foreground">
+              LIBERA EM BREVE
+            </span>
+          </div>
+        )}
+
+        {/* Top Status Badge */}
+        {isActive ? (
+          <div className="absolute top-3 right-3 rounded-md bg-emerald-500 text-black px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest shadow-md">
+            MÊS VIGENTE
+          </div>
+        ) : (
+          <div className="absolute top-3 right-3 rounded-md bg-background/90 border border-border text-muted-foreground px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest shadow-md flex items-center gap-1">
+            <Lock className="h-3 w-3" /> BLOQUEADO
+          </div>
+        )}
       </div>
 
       <div className="p-6">
         <h3 className="font-display text-lg font-bold tracking-wider text-foreground">{title}</h3>
         <p className="mt-1 line-clamp-2 text-xs font-sans text-muted-foreground">{description}</p>
 
-        <div className="mt-5 rounded-xl border border-gold/20 bg-background/60 p-3.5">
-          <div className="mb-2 flex justify-between text-xs font-bold uppercase tracking-wider">
-            <span className="text-muted-foreground">DESEMPENHO GERAL</span>
-            <span className="text-gold">{stats.percent}%</span>
-          </div>
-          <Progress value={stats.percent} className="h-2.5 bg-muted" />
-          <div className="mt-3 flex justify-between gap-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            <span className="inline-flex items-center gap-1">
-              <PlayCircle className="h-3.5 w-3.5 text-gold" /> {stats.lessons}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Target className="h-3.5 w-3.5 text-gold" /> {stats.goals}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <BookOpen className="h-3.5 w-3.5 text-gold" /> {stats.exams}
-            </span>
-          </div>
-        </div>
+        {isActive ? (
+          <>
+            <div className="mt-5 rounded-xl border border-gold/20 bg-background/60 p-3.5">
+              <div className="mb-2 flex justify-between text-xs font-bold uppercase tracking-wider">
+                <span className="text-muted-foreground">DESEMPENHO GERAL</span>
+                <span className="text-gold">{stats.percent}%</span>
+              </div>
+              <Progress value={stats.percent} className="h-2.5 bg-muted" />
+              <div className="mt-3 flex justify-between gap-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1">
+                  <PlayCircle className="h-3.5 w-3.5 text-gold" /> {stats.lessons}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Target className="h-3.5 w-3.5 text-gold" /> {stats.goals}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <BookOpen className="h-3.5 w-3.5 text-gold" /> {stats.exams}
+                </span>
+              </div>
+            </div>
 
-        <Button
-          asChild
-          className="mt-5 w-full bg-gradient-gold text-black font-extrabold uppercase tracking-wider shadow-glow hover:brightness-110 h-11"
-        >
-          <Link to="/curso/$slug" params={{ slug }}>
-            ACESSAR CURSO <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+            <Button
+              asChild
+              className="mt-5 w-full bg-gradient-gold text-black font-extrabold uppercase tracking-wider shadow-glow hover:brightness-110 h-11"
+            >
+              <Link to="/curso/$slug" params={{ slug }}>
+                ACESSAR CURSO <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </>
+        ) : (
+          <Button
+            disabled
+            className="mt-5 w-full bg-muted/60 text-muted-foreground font-extrabold uppercase tracking-wider h-11 border border-border cursor-not-allowed"
+          >
+            <Lock className="mr-2 h-4 w-4" /> LIBERA EM BREVE
+          </Button>
+        )}
       </div>
     </div>
   );

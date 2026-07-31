@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Lock,
   Key,
+  Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +55,67 @@ export const Route = createFileRoute("/_authenticated/admin/alunos")({
   ),
 });
 
+function computeStudentProtocolsSummary(
+  userId: string,
+  courses: any[],
+  cycles: any[],
+  lessons: any[],
+  goals: any[],
+  exams: any[],
+  lessonProg: any[],
+  goalProg: any[],
+  examProg: any[]
+) {
+  const userLessons = new Set(lessonProg.filter((lp) => lp.user_id === userId).map((lp) => lp.lesson_id));
+  const userGoals = new Set(goalProg.filter((gp) => gp.user_id === userId).map((gp) => gp.goal_id));
+  const userExams = new Set(examProg.filter((ep) => ep.user_id === userId).map((ep) => ep.exam_id));
+
+  let completedCount = 0;
+  let inProgressCount = 0;
+
+  const defaultMonths = [
+    { id: "protocolo-agosto", slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
+    { id: "protocolo-setembro", slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
+    { id: "protocolo-outubro", slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
+  ];
+
+  const allCourses = courses.length > 0 ? courses : defaultMonths;
+
+  const monthlyDetails = allCourses.map((course) => {
+    const courseCycleIds = new Set(cycles.filter((c) => c.course_id === course.id).map((c) => c.id));
+    const cLessons = lessons.filter((l) => courseCycleIds.has(l.cycle_id));
+    const cGoals = goals.filter((g) => courseCycleIds.has(g.cycle_id));
+    const cExams = exams.filter((e) => e.course_id === course.id);
+
+    const total = (cLessons.length || 4) + (cGoals.length || 4) + (cExams.length || 4);
+    const done =
+      cLessons.filter((l) => userLessons.has(l.id)).length +
+      cGoals.filter((g) => userGoals.has(g.id)).length +
+      cExams.filter((e) => userExams.has(e.id)).length;
+
+    const percent = total ? Math.round((done / total) * 100) : 0;
+    if (percent === 100 && total > 0) completedCount++;
+    else if (done > 0) inProgressCount++;
+
+    return {
+      title: course.title,
+      slug: course.slug,
+      done,
+      total,
+      percent,
+      isCompleted: percent === 100 && total > 0,
+      hasStarted: done > 0,
+    };
+  });
+
+  return {
+    totalCourses: allCourses.length,
+    completedCount,
+    inProgressCount,
+    monthlyDetails,
+  };
+}
+
 function AdminStudents() {
   const [search, setSearch] = useState("");
   const qc = useQueryClient();
@@ -67,17 +129,36 @@ function AdminStudents() {
           .select("*")
           .order("created_at", { ascending: false });
 
-        const [enrollmentsRes, rolesRes, lessonProgRes, goalProgRes, examProgRes] =
-          await Promise.all([
-            supabase.from("enrollments").select("*"),
-            supabase.from("user_roles").select("*"),
-            supabase.from("lesson_progress").select("*"),
-            supabase.from("goal_progress").select("*"),
-            supabase.from("exam_progress").select("*"),
-          ]);
+        const [
+          coursesRes,
+          cyclesRes,
+          lessonsRes,
+          goalsRes,
+          examsRes,
+          enrollmentsRes,
+          rolesRes,
+          lessonProgRes,
+          goalProgRes,
+          examProgRes,
+        ] = await Promise.all([
+          supabase.from("courses").select("*"),
+          supabase.from("cycles").select("*"),
+          supabase.from("lessons").select("*"),
+          supabase.from("question_goals").select("*"),
+          supabase.from("mock_exams").select("*"),
+          supabase.from("enrollments").select("*"),
+          supabase.from("user_roles").select("*"),
+          supabase.from("lesson_progress").select("*"),
+          supabase.from("goal_progress").select("*"),
+          supabase.from("exam_progress").select("*"),
+        ]);
 
+        const dbCourses = coursesRes?.data ?? [];
+        const dbCycles = cyclesRes?.data ?? [];
+        const dbLessons = lessonsRes?.data ?? [];
+        const dbGoals = goalsRes?.data ?? [];
+        const dbExams = examsRes?.data ?? [];
         const enrollments = enrollmentsRes?.data ?? [];
-        const roles = rolesRes?.data ?? [];
         const lessonProg = lessonProgRes?.data ?? [];
         const goalProg = goalProgRes?.data ?? [];
         const examProg = examProgRes?.data ?? [];
@@ -88,12 +169,25 @@ function AdminStudents() {
         // 1. Add students from local persistent registry
         for (const s of localStudents) {
           if (s && s.id && s.email) {
+            const summary = computeStudentProtocolsSummary(
+              s.id,
+              dbCourses,
+              dbCycles,
+              dbLessons,
+              dbGoals,
+              dbExams,
+              lessonProg,
+              goalProg,
+              examProg
+            );
+
             allMap.set(s.id, {
               ...s,
               enrollments: enrollments.filter((e: any) => e.user_id === s.id),
               lessonsCompleted: lessonProg.filter((lp: any) => lp.user_id === s.id).length,
               goalsCompleted: goalProg.filter((gp: any) => gp.user_id === s.id).length,
               examsCompleted: examProg.filter((ep: any) => ep.user_id === s.id).length,
+              protocolsSummary: summary,
             });
           }
         }
@@ -114,12 +208,25 @@ function AdminStudents() {
             const gDone = goalProg.filter((gp: any) => gp.user_id === p.id).length;
             const eDone = examProg.filter((ep: any) => ep.user_id === p.id).length;
 
+            const summary = computeStudentProtocolsSummary(
+              p.id,
+              dbCourses,
+              dbCycles,
+              dbLessons,
+              dbGoals,
+              dbExams,
+              lessonProg,
+              goalProg,
+              examProg
+            );
+
             allMap.set(p.id, {
               ...p,
               enrollments: userEnrollments,
               lessonsCompleted: lDone,
               goalsCompleted: gDone,
               examsCompleted: eDone,
+              protocolsSummary: summary,
             });
           }
         }
@@ -254,13 +361,28 @@ function StudentRow({
   const [open, setOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [changingPass, setChangingPass] = useState(false);
+  const qc = useQueryClient();
+
   const cleanPhone = student.whatsapp?.replace(/\D/g, "");
   const createdDate = student.created_at
     ? new Date(student.created_at).toLocaleDateString("pt-BR")
     : "Hoje";
 
   const toggleEnrollment = useMutation({
-    mutationFn: async ({ courseId, isEnrolled }: { courseId: string; isEnrolled: boolean }) => {
+    mutationFn: async ({
+      courseId,
+      isEnrolled,
+      courseTitle,
+    }: {
+      courseId: string;
+      isEnrolled: boolean;
+      courseTitle?: string;
+    }) => {
+      // 1. Unblock student if enrolling and currently blocked
+      if (!isEnrolled && student.is_blocked) {
+        updateStudentStatus(student.id || student.email, false);
+      }
+
       if (isEnrolled) {
         await supabase
           .from("enrollments")
@@ -271,8 +393,17 @@ function StudentRow({
         await supabase.from("enrollments").insert({ user_id: student.id, course_id: courseId });
       }
     },
-    onSuccess: () => {
-      toast.success("Matrícula atualizada!");
+    onSuccess: (_, variables) => {
+      if (variables.isEnrolled) {
+        toast.success("Matrícula removida.");
+      } else {
+        toast.success(
+          `Matrícula realizada e acesso liberado com sucesso para ${variables.courseTitle ?? "o curso"}!`
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["admin-students-full"] });
+      qc.invalidateQueries({ queryKey: ["admin-courses-list-full"] });
+      qc.invalidateQueries({ queryKey: ["my-courses"] });
       onUpdated();
     },
     onError: (e: any) => toast.error(e.message || "Erro ao atualizar matrícula."),
@@ -304,7 +435,7 @@ function StudentRow({
   }
 
   return (
-    <tr className="border-t border-border hover:bg-accent/30 transition-colors">
+    <tr className="border-t border-border/60 hover:bg-accent/20 transition-colors">
       <td className="px-5 py-4">
         <div className="font-bold text-foreground">{student.full_name || "Aluno sem Nome"}</div>
         <div className="text-xs text-muted-foreground">{student.email}</div>
@@ -315,7 +446,7 @@ function StudentRow({
             href={`https://wa.me/55${cleanPhone}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:underline"
           >
             <Phone className="h-3.5 w-3.5" /> {student.whatsapp}
           </a>
@@ -323,31 +454,25 @@ function StudentRow({
           <span className="text-xs text-muted-foreground">{student.whatsapp || "—"}</span>
         )}
       </td>
-      <td className="px-5 py-4 text-xs font-semibold text-muted-foreground">{createdDate}</td>
+      <td className="px-5 py-4 text-xs font-medium text-muted-foreground">{createdDate}</td>
       <td className="px-5 py-4 text-center">
         {student.is_blocked ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-0.5 text-xs font-bold text-destructive border border-destructive/30">
-            ● Bloqueado
-          </span>
+          <span className="text-xs font-bold text-destructive">● Bloqueado</span>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-400 border border-emerald-500/30">
-            ● Ativo
-          </span>
+          <span className="text-xs font-bold text-emerald-400">● Ativo</span>
         )}
       </td>
       <td className="px-5 py-4 text-center">
-        <div className="inline-flex items-center gap-3 rounded-lg border border-gold/25 bg-gold/10 px-3 py-1.5 text-xs font-bold text-gold">
-          <span>{student.lessonsCompleted ?? 0} Aulas</span>
-          <span>•</span>
-          <span>{student.goalsCompleted ?? 0} Metas</span>
-          <span>•</span>
-          <span>{student.examsCompleted ?? 0} Simulados</span>
+        <div className="text-xs text-muted-foreground font-medium">
+          <strong className="text-foreground">{student.lessonsCompleted ?? 0}</strong> Aulas ·{" "}
+          <strong className="text-foreground">{student.goalsCompleted ?? 0}</strong> Metas ·{" "}
+          <strong className="text-foreground">{student.examsCompleted ?? 0}</strong> Simulados
         </div>
       </td>
       <td className="px-5 py-4 text-center">
-        <span className="rounded-md bg-accent px-2.5 py-1 text-xs font-bold text-foreground">
-          {student.enrollments.length} curso(s)
-        </span>
+        <div className="text-xs font-semibold text-foreground">
+          {student.enrollments.length} protocolo(s)
+        </div>
       </td>
       <td className="px-5 py-4 text-right">
         <Dialog open={open} onOpenChange={setOpen}>
@@ -442,72 +567,100 @@ function StudentRow({
                 </form>
               </div>
 
-              {/* Progress Summary Card */}
-              <div className="rounded-xl border border-gold/30 bg-gold/10 p-4">
-                <div className="text-xs font-extrabold uppercase tracking-widest text-gold mb-2">
-                  PROGRESSO INDIVIDUAL
+              {/* Monthly Protocol Enrollment & Selection Card */}
+              <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-gold flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <BookOpen className="h-4 w-4 text-gold" /> Matricular em Protocolo Mensal
+                  </span>
+                  <span className="text-[11px] text-muted-foreground font-normal">
+                    Participando de <strong className="text-foreground">{student.enrollments.length}</strong> protocolo(s)
+                  </span>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="bg-background/80 rounded-lg p-2 border border-border">
-                    <div className="font-display text-xl font-bold text-gold">
-                      {student.lessonsCompleted}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground font-bold uppercase">
-                      Aulas Concluídas
-                    </div>
-                  </div>
-                  <div className="bg-background/80 rounded-lg p-2 border border-border">
-                    <div className="font-display text-xl font-bold text-gold">
-                      {student.goalsCompleted}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground font-bold uppercase">
-                      Metas de Questões
-                    </div>
-                  </div>
-                  <div className="bg-background/80 rounded-lg p-2 border border-border">
-                    <div className="font-display text-xl font-bold text-gold">
-                      {student.examsCompleted}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground font-bold uppercase">
-                      Simulados Feitos
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Course Enrollment Toggle */}
-              <div>
-                <Label className="text-xs font-bold uppercase tracking-wider text-gold flex items-center gap-1.5 mb-2">
-                  <BookOpen className="h-4 w-4" /> Gestão de Matrículas em Cursos
-                </Label>
-                <div className="space-y-2">
-                  {courses.map((c: any) => {
-                    const enrolled = student.enrollments.some((e: any) => e.course_id === c.id);
+                {/* Dropdown Box: Selecting automatically enrolls & unblocks */}
+                <div className="pt-1 pb-2 border-b border-border/60">
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const cId = e.target.value;
+                      if (!cId) return;
+                      const matchingCourse = courses.find((c: any) => c.id === cId || c.slug === cId);
+                      const courseTitle = matchingCourse?.title || "Protocolo";
+                      const isEnrolled = student.enrollments.some(
+                        (en: any) => en.course_id === cId || en.course_id === matchingCourse?.slug
+                      );
+                      toggleEnrollment.mutate({ courseId: cId, isEnrolled, courseTitle });
+                    }}
+                    className="w-full rounded-xl border border-gold/40 bg-background px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-gold cursor-pointer"
+                  >
+                    <option value="" disabled>
+                      ➕ Clique para selecionar o mês e matricular o aluno...
+                    </option>
+                    {courses.map((c: any) => {
+                      const enrolled = student.enrollments.some(
+                        (e: any) => e.course_id === c.id || e.course_id === c.slug
+                      );
+                      return (
+                        <option key={c.id || c.slug} value={c.id}>
+                          {c.title} {enrolled ? "✓ (Já Matriculado)" : "➔ (Clique para Matricular e Liberar Acesso)"}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Explicit List of Protocol Names with Status & Progress */}
+                <div className="space-y-2 pt-1">
+                  {student.protocolsSummary?.monthlyDetails.map((m: any) => {
+                    const matchingCourse = courses.find(
+                      (c: any) => c.slug === m.slug || c.title === m.title
+                    );
+                    const courseId = matchingCourse?.id || m.slug;
+                    const isEnrolled = student.enrollments.some(
+                      (e: any) => e.course_id === courseId || e.course_id === m.slug
+                    );
+
                     return (
                       <div
-                        key={c.id}
-                        className="flex items-center justify-between rounded-xl border border-border bg-background p-3"
+                        key={m.slug}
+                        className="flex items-center justify-between rounded-lg border border-border/80 bg-background/80 p-3"
                       >
                         <div>
-                          <div className="font-bold text-xs">{c.title}</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {enrolled ? "Matriculado" : "Não matriculado"}
+                          <div className="font-bold text-xs text-foreground">{m.title}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-2">
+                            <span
+                              className={
+                                isEnrolled ? "text-emerald-400 font-semibold" : "text-muted-foreground"
+                              }
+                            >
+                              {isEnrolled ? "✓ Matriculado" : "○ Não Matriculado"}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {m.done} de {m.total} itens ({m.percent}%)
+                            </span>
                           </div>
                         </div>
+
                         <Button
                           size="sm"
-                          variant={enrolled ? "destructive" : "default"}
+                          variant={isEnrolled ? "outline" : "default"}
                           disabled={toggleEnrollment.isPending}
                           onClick={() =>
-                            toggleEnrollment.mutate({ courseId: c.id, isEnrolled: enrolled })
+                            toggleEnrollment.mutate({
+                              courseId,
+                              isEnrolled,
+                              courseTitle: m.title,
+                            })
                           }
                           className={
-                            enrolled
-                              ? "h-8 text-xs font-bold"
-                              : "h-8 text-xs font-extrabold bg-gradient-gold text-black shadow-glow"
+                            isEnrolled
+                              ? "h-8 text-xs font-bold border-destructive/40 text-destructive hover:bg-destructive/10"
+                              : "h-8 text-xs font-extrabold bg-gold text-black hover:bg-gold-light"
                           }
                         >
-                          {enrolled ? "Cancelar Matrícula" : "+ Matricular Aluno"}
+                          {isEnrolled ? "Remover" : "Matricular"}
                         </Button>
                       </div>
                     );
