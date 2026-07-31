@@ -15,11 +15,13 @@ import {
   Key,
   Trophy,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getRegisteredStudents,
+  saveRegisteredStudent,
   updateStudentStatus,
   updateStudentPassword,
   clearAllRegisteredStudents,
@@ -294,14 +296,17 @@ function AdminStudents() {
             </p>
           </div>
 
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, e-mail ou WhatsApp..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-background/80"
-            />
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, e-mail..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-background/80"
+              />
+            </div>
+            <AddStudentDialog onAdded={() => qc.invalidateQueries({ queryKey: ["admin-students-full"] })} />
           </div>
         </div>
 
@@ -348,6 +353,108 @@ function AdminStudents() {
         )}
       </div>
     </div>
+  );
+}
+
+function AddStudentDialog({ onAdded }: { onAdded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!fullName || !email) {
+      toast.error("Preencha o nome e e-mail do aluno.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const studentId = `student-${crypto.randomUUID()}`;
+      const newStudent = {
+        id: studentId,
+        full_name: fullName,
+        email: email.trim().toLowerCase(),
+        whatsapp: whatsapp.trim(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_blocked: false,
+      };
+
+      // 1. Insert profile in Supabase DB
+      await supabase.from("profiles").upsert(newStudent, { onConflict: "id" });
+
+      // 2. Save in local registry
+      saveRegisteredStudent(newStudent);
+
+      toast.success(`Aluno ${fullName} cadastrado com sucesso no Painel Admin!`);
+      setFullName("");
+      setEmail("");
+      setWhatsapp("");
+      setOpen(false);
+      onAdded();
+    } catch (err: any) {
+      toast.error("Erro ao cadastrar aluno: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-gradient-gold text-black font-extrabold text-xs uppercase tracking-wider shadow-glow h-10 px-4 shrink-0">
+          <UserPlus className="mr-1.5 h-4 w-4" /> Cadastrar Aluno
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-gold" /> Cadastrar Novo Aluno
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label>Nome Completo do Aluno</Label>
+            <Input
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Ex: João da Silva"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>E-mail do Aluno</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="aluno@exemplo.com"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>WhatsApp (Opcional)</Label>
+            <Input
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              placeholder="(11) 99999-9999"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-gold text-black font-bold">
+              {loading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Salvar Aluno
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
