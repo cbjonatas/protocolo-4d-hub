@@ -40,7 +40,14 @@ async function fetchMyCourses() {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
-  const existingSlugs = new Set((courses ?? []).map((c) => c.slug));
+  let list = [...(courses ?? [])];
+
+  // Refine first course title if generic
+  if (list.length > 0 && (list[0].title === "Protocolo 4D" || list[0].title === "PROTOCOLO 4D")) {
+    list[0] = { ...list[0], title: "Protocolo 4D — Agosto" };
+  }
+
+  const existingSlugs = new Set(list.map((c) => c.slug));
   const defaults = [
     {
       id: "protocolo-agosto",
@@ -71,13 +78,12 @@ async function fetchMyCourses() {
     },
   ];
 
-  const result = [...(courses ?? [])];
   for (const d of defaults) {
     if (!existingSlugs.has(d.slug)) {
-      result.push(d as any);
+      list.push(d as any);
     }
   }
-  return result;
+  return list;
 }
 
 function Dashboard() {
