@@ -266,6 +266,15 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
       },
     });
 
+    setLoading(false);
+
+    if (error) {
+      toast.error(
+        error.message.includes("registered") ? "Este e-mail já está cadastrado." : error.message,
+      );
+      return;
+    }
+
     if (signUpData?.user) {
       const studentRecord = {
         id: signUpData.user.id,
@@ -307,13 +316,6 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
       }
     }
 
-    setLoading(false);
-    if (error) {
-      toast.error(
-        error.message.includes("registered") ? "Este e-mail já está cadastrado." : error.message,
-      );
-      return;
-    }
     toast.success("Conta criada! Bem-vindo à plataforma.");
     onSuccess();
   }

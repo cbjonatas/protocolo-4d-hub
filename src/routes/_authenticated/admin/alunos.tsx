@@ -493,13 +493,19 @@ function StudentRow({
       }
 
       if (isEnrolled) {
-        await supabase
+        const { error: delError } = await supabase
           .from("enrollments")
           .delete()
           .eq("user_id", student.id)
           .eq("course_id", courseId);
+        if (delError) throw new Error(delError.message);
       } else {
-        await supabase.from("enrollments").insert({ user_id: student.id, course_id: courseId });
+        const { error: insError } = await supabase.from("enrollments").insert({
+          user_id: student.id,
+          course_id: courseId,
+          enrolled_at: new Date().toISOString(),
+        });
+        if (insError) throw new Error(insError.message);
       }
     },
     onSuccess: (_, variables) => {
@@ -742,6 +748,7 @@ function StudentRow({
                 <div className="pt-1 pb-2 border-b border-border/60">
                   <select
                     value=""
+                    disabled={toggleEnrollment.isPending}
                     onChange={(e) => {
                       const cId = e.target.value;
                       if (!cId) return;
@@ -752,10 +759,14 @@ function StudentRow({
                       );
                       toggleEnrollment.mutate({ courseId: cId, isEnrolled, courseTitle });
                     }}
-                    className="w-full rounded-xl border border-gold/40 bg-background px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-gold cursor-pointer"
+                    className={`w-full rounded-xl border border-gold/40 bg-background px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-gold transition-opacity ${
+                      toggleEnrollment.isPending ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                    }`}
                   >
                     <option value="" disabled>
-                      ➕ Clique para selecionar o mês e matricular o aluno...
+                      {toggleEnrollment.isPending
+                        ? "⏳ Processando matrícula..."
+                        : "➕ Clique para selecionar o mês e matricular o aluno..."}
                     </option>
                     {courses.map((c: any) => {
                       const enrolled = student.enrollments.some(
@@ -776,10 +787,11 @@ function StudentRow({
                     const matchingCourse = courses.find(
                       (c: any) => c.slug === m.slug || c.title === m.title
                     );
-                    const courseId = matchingCourse?.id || m.slug;
+                    const courseId = matchingCourse?.id;
                     const isEnrolled = student.enrollments.some(
-                      (e: any) => e.course_id === courseId || e.course_id === m.slug
+                      (e: any) => courseId ? e.course_id === courseId : e.course_id === m.slug
                     );
+                    const canEnroll = !!courseId;
 
                     return (
                       <div
@@ -806,9 +818,10 @@ function StudentRow({
                         <Button
                           size="sm"
                           variant={isEnrolled ? "outline" : "default"}
-                          disabled={toggleEnrollment.isPending}
+                          disabled={toggleEnrollment.isPending || !canEnroll}
+                          title={!canEnroll ? "Curso não encontrado no banco de dados" : undefined}
                           onClick={() =>
-                            toggleEnrollment.mutate({
+                            courseId && toggleEnrollment.mutate({
                               courseId,
                               isEnrolled,
                               courseTitle: m.title,

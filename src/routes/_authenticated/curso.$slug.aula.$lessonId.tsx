@@ -42,21 +42,26 @@ function LessonPage() {
   const complete = useMutation({
     mutationFn: async (done: boolean) => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error();
+      if (!u.user) throw new Error("Usuário não autenticado.");
       if (done) {
-        await supabase.from("lesson_progress").insert({ user_id: u.user.id, lesson_id: lessonId });
+        const { error } = await supabase
+          .from("lesson_progress")
+          .insert({ user_id: u.user.id, lesson_id: lessonId });
+        if (error) throw new Error(error.message);
       } else {
-        await supabase
+        const { error } = await supabase
           .from("lesson_progress")
           .delete()
           .eq("user_id", u.user.id)
           .eq("lesson_id", lessonId);
+        if (error) throw new Error(error.message);
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["course-full", slug] });
       toast.success("Progresso atualizado.");
     },
+    onError: (e: any) => toast.error(e.message || "Erro ao salvar progresso."),
   });
 
   if (!data?.lesson || !courseData)

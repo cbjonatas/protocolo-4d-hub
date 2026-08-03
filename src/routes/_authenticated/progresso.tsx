@@ -27,10 +27,48 @@ async function fetchQuizStats() {
   return { attempts: data?.length ?? 0, answered, correct };
 }
 
+async function fetchAllEnrolledCourses() {
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user) return [];
+
+  const { data: enrollments } = await supabase
+    .from("enrollments")
+    .select("course_id")
+    .eq("user_id", u.user.id);
+
+  const { data: allCourses } = await supabase
+    .from("courses")
+    .select("id, slug, title")
+    .order("sort_order", { ascending: true });
+
+  const enrolledIds = new Set((enrollments ?? []).map((e) => e.course_id));
+
+  // August is always available (intentional business rule)
+  const list = (allCourses ?? []).filter(
+    (c) => enrolledIds.has(c.id) || c.slug === "protocolo-4d"
+  );
+
+  // Always include August default if no courses in DB
+  if (list.length === 0) {
+    list.push({ id: "protocolo-4d-id", slug: "protocolo-4d", title: "Protocolo 4D — Agosto" } as any);
+  }
+
+  return list;
+}
+
 function ProgressPage() {
+  const { data: enrolledCourses = [] } = useQuery({
+    queryKey: ["enrolled-courses-progress"],
+    queryFn: fetchAllEnrolledCourses,
+  });
+
+  // Use the first enrolled course as primary for the top progress bar
+  const primarySlug = enrolledCourses[0]?.slug ?? "protocolo-4d";
+
   const { data } = useQuery({
-    queryKey: ["course-full", "protocolo-4d"],
-    queryFn: () => fetchFullCourse("protocolo-4d"),
+    queryKey: ["course-full", primarySlug],
+    queryFn: () => fetchFullCourse(primarySlug),
+    enabled: !!primarySlug,
   });
   const { data: quiz } = useQuery({ queryKey: ["quiz-stats"], queryFn: fetchQuizStats });
   if (!data)

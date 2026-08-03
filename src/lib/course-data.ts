@@ -313,8 +313,8 @@ export async function fetchFullCourse(slug: string) {
   const goals = (goalsRes.data && goalsRes.data.length > 0) ? goalsRes.data : DEFAULT_GOALS;
   const exams = (examsRes.data && examsRes.data.length > 0) ? examsRes.data : DEFAULT_EXAMS;
 
-  // Enrollment fallback for local testing if user is logged in
-  const enrollment = enrollmentRes.data ?? (userId ? { enrolled_at: new Date().toISOString() } : { enrolled_at: new Date().toISOString() });
+  // Return null if no real enrollment found — computeStatus will use Date.now() as base
+  const enrollment = enrollmentRes.data ?? null;
 
   return {
     course: activeCourse,

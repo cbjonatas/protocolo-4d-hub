@@ -18,6 +18,12 @@ export const DEFAULT_ADMIN_USER = {
   role: "admin",
 };
 
+// Centralized special emails — update here to propagate everywhere
+export const ADMIN_EMAIL = "admin@protocolo4d.com";
+export const PROFESSOR_EMAIL = "professorjonatasg@gmail.com";
+export const EXCLUDED_EMAIL_PATTERNS = ["admin", "jhon", "teste", "test"];
+export const SYNTHETIC_STUDENT_PATTERN = { prefix: "aluno_", suffix: "@plataforma.com" };
+
 export const ALLOWED_LOGINS = [
   { name: "Administrador", email: DEFAULT_ADMIN_USER.email, role: "admin" },
 ];

@@ -46,20 +46,26 @@ function ExamPage() {
   const complete = useMutation({
     mutationFn: async (done: boolean) => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error();
-      if (done)
-        await supabase.from("exam_progress").insert({ user_id: u.user.id, exam_id: examId });
-      else
-        await supabase
+      if (!u.user) throw new Error("Usuário não autenticado.");
+      if (done) {
+        const { error } = await supabase
+          .from("exam_progress")
+          .insert({ user_id: u.user.id, exam_id: examId });
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabase
           .from("exam_progress")
           .delete()
           .eq("user_id", u.user.id)
           .eq("exam_id", examId);
+        if (error) throw new Error(error.message);
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["course-full", slug] });
       toast.success("Progresso atualizado.");
     },
+    onError: (e: any) => toast.error(e.message || "Erro ao salvar progresso."),
   });
 
   if (!exam || !courseData)
