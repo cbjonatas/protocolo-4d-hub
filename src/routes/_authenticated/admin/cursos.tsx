@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Loader2, Edit3, Upload, Sparkles, Trash2, Plus, Check, X, FileText, Eye, Power, Copy, CheckCircle2 } from "lucide-react";
@@ -115,9 +116,9 @@ function AdminCourses() {
     onError: (e: any) => toast.error(e.message ?? "Erro ao atualizar status"),
   });
 
-  // Duplicate course mutation
+  // Duplicate course mutation (deep copy via secure DB routine)
   const duplicateCourseMutation = useMutation({
-    mutationFn: async ({ sourceCourseId, title }: { sourceCourseId: string; title: string }) => {
+    mutationFn: async ({ title }: { title: string }) => {
       const slug = title
         .toLowerCase()
         .normalize("NFD")
@@ -125,27 +126,61 @@ function AdminCourses() {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
-      const { error } = await supabase.rpc("duplicate_course", {
-        p_course_id: sourceCourseId,
+      // Ensure the source course really exists in the database
+      let sourceId: string | undefined = dbCourses.find((c: any) => c.slug === currentCourse.slug)?.id;
+      if (!sourceId) {
+        const { data: created, error: createErr } = await supabase
+          .from("courses")
+          .insert({
+            slug: currentCourse.slug,
+            title: currentCourse.title,
+            description: currentCourse.description ?? "",
+            is_active: !!currentCourse.is_active,
+          })
+          .select("id")
+          .single();
+        if (createErr) throw createErr;
+        sourceId = created.id;
+      }
+
+      const { data, error } = await supabase.rpc("duplicate_course", {
+        p_course_id: sourceId,
         p_new_title: title,
         p_new_slug: slug,
       });
-      if (error) {
-        await supabase.from("courses").insert({
-          slug,
-          title,
-          description: currentCourse.description ?? "",
-          is_active: false,
-        });
-      }
-      setSelectedSlug(slug);
+      if (error) throw error;
+
+      const { data: newCourse } = await supabase
+        .from("courses")
+        .select("slug")
+        .eq("id", data as unknown as string)
+        .maybeSingle();
+      return newCourse?.slug ?? slug;
     },
-    onSuccess: () => {
+    onSuccess: (newSlug) => {
+      setSelectedSlug(newSlug);
       invalidate();
-      toast.success("Novo Protocolo Mensal duplicado com sucesso em Rascunho!");
+      toast.success("Protocolo duplicado com sucesso (em Rascunho)!");
     },
     onError: (e: any) => toast.error(e.message ?? "Erro ao duplicar protocolo"),
   });
+
+  // Delete course mutation (removes course + exclusive content)
+  const deleteCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      const { error } = await supabase.rpc("delete_course", { p_course_id: courseId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setSelectedSlug("");
+      invalidate();
+      toast.success("Curso/Protocolo excluído com sucesso.");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro ao excluir protocolo"),
+  });
+
+  const currentDbCourse = dbCourses.find((c: any) => c.slug === activeSlug);
+
 
   const displayCycles = courseData?.cycles ?? [];
 
@@ -198,11 +233,18 @@ function AdminCourses() {
 
             <DuplicateCourseDialog
               currentCourse={currentCourse}
-              onDuplicate={(title) =>
-                duplicateCourseMutation.mutate({ sourceCourseId: currentCourse.id, title })
-              }
+              onDuplicate={(title) => duplicateCourseMutation.mutate({ title })}
               isLoading={duplicateCourseMutation.isPending}
             />
+
+            {currentDbCourse && (
+              <DeleteCourseDialog
+                courseTitle={currentCourse.title}
+                isLoading={deleteCourseMutation.isPending}
+                onConfirm={() => deleteCourseMutation.mutate(currentDbCourse.id)}
+              />
+            )}
+
           </div>
         </div>
 
@@ -472,7 +514,7 @@ function DuplicateCourseDialog({
   isLoading: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState(`${currentCourse.title} — Cópia`);
+  const [title, setTitle] = useState(`${currentCourse.title} - CÓPIA`);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -521,6 +563,65 @@ function DuplicateCourseDialog({
     </Dialog>
   );
 }
+
+function DeleteCourseDialog({
+  courseTitle,
+  onConfirm,
+  isLoading,
+}: {
+  courseTitle: string;
+  onConfirm: () => void;
+  isLoading: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold"
+        >
+          <Trash2 className="mr-1.5 h-4 w-4" />
+          Excluir
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Excluir Curso / Protocolo</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <p className="text-sm">
+            Tem certeza que deseja excluir <strong>{courseTitle}</strong>? Esta ação não poderá ser
+            desfeita.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Serão removidos também os ciclos, videoaulas, materiais, metas, questões, simulados,
+            matrículas e progressos que pertencem exclusivamente a este protocolo.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isLoading}
+              onClick={() => {
+                onConfirm();
+                setOpen(false);
+              }}
+            >
+              {isLoading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Excluir definitivamente
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 
 function EditorCard({
   title,
