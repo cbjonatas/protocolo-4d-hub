@@ -585,11 +585,9 @@ function StudentRow({
       // 4. Perform Enrollment via RPC to bypass RLS restrictions
       const action = isEnrolled ? "unenroll" : "enroll";
       const { data, error: rpcError } = await supabase.rpc("admin_toggle_enrollment", {
-        args: {
-          p_user_id: targetUserId,
-          p_course_id_or_slug: targetCourseId,
-          p_action: action,
-        },
+        p_user_id: targetUserId,
+        p_course_id_or_slug: targetCourseId,
+        p_action: action,
       });
 
       if (rpcError) {
