@@ -579,9 +579,13 @@ function StudentRow({
           `Matrícula realizada e acesso liberado com sucesso para ${variables.courseTitle ?? "o curso"}!`
         );
       }
+      // BUG 1 FIX: invalidar TODOS os caches de curso para que o aluno perca
+      // acesso imediatamente após a remoção de matrícula, sem precisar fazer novo login.
+      // O cache ["course-full", slug] é o que controla se enrollment existe na view do aluno.
       qc.invalidateQueries({ queryKey: ["admin-students-full"] });
       qc.invalidateQueries({ queryKey: ["admin-courses-list-full"] });
       qc.invalidateQueries({ queryKey: ["my-courses"] });
+      qc.invalidateQueries({ queryKey: ["course-full"] }); // invalida todos os slugs
       onUpdated();
     },
     onError: (e: any) => toast.error(e.message || "Erro ao atualizar matrícula."),
@@ -817,8 +821,14 @@ function StudentRow({
                       if (!cId) return;
                       const matchingCourse = courses.find((c: any) => c.id === cId || c.slug === cId);
                       const courseTitle = matchingCourse?.title || "Protocolo";
+                      // BUG 2 FIX: comparar course_id tanto com o ID real (UUID do banco)
+                      // quanto com o slug sintético e o slug do course, para evitar
+                      // falsos negativos quando o banco armazena UUID real.
                       const isEnrolled = student.enrollments.some(
-                        (en: any) => en.course_id === cId || en.course_id === matchingCourse?.slug
+                        (en: any) =>
+                          en.course_id === cId ||
+                          en.course_id === matchingCourse?.id ||
+                          en.course_id === matchingCourse?.slug
                       );
                       toggleEnrollment.mutate({ courseId: cId, isEnrolled, courseTitle });
                     }}
@@ -851,8 +861,13 @@ function StudentRow({
                       (c: any) => c.slug === m.slug || c.title === m.title
                     );
                     const courseId = matchingCourse?.id || m.slug;
+                    // BUG 2 FIX: checar UUID real, ID sintético E slug para detectar
+                    // corretamente matrículas de setembro/outros meses com IDs variados.
                     const isEnrolled = student.enrollments.some(
-                      (e: any) => e.course_id === matchingCourse?.id || e.course_id === m.slug
+                      (e: any) =>
+                        e.course_id === matchingCourse?.id ||
+                        e.course_id === m.slug ||
+                        e.course_id === courseId
                     );
 
                     return (

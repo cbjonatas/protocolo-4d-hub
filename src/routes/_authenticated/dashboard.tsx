@@ -46,7 +46,16 @@ async function fetchMyCourses() {
     .select("course_id")
     .eq("user_id", u.user.id);
 
-  const enrolledCourseIds = new Set((userEnrollments ?? []).map((e) => e.course_id));
+  // BUG 2 FIX: indexar matrículas tanto por course_id (UUID real) quanto por slug,
+  // para cobrir matrículas criadas com ID sintético (ex: "protocolo-setembro") antes
+  // do upsert do curso no banco, e matrículas com UUID real após o upsert.
+  const enrolledCourseIds = new Set<string>();
+  for (const e of userEnrollments ?? []) {
+    enrolledCourseIds.add(e.course_id);
+    // Adicionar também o slug do curso correspondente a este course_id
+    const matchedCourse = (courses ?? []).find((c) => c.id === e.course_id);
+    if (matchedCourse?.slug) enrolledCourseIds.add(matchedCourse.slug);
+  }
 
   let list = [...(courses ?? [])];
 
@@ -93,6 +102,7 @@ async function fetchMyCourses() {
   }
 
   return list.map((c) => {
+    // BUG 2 FIX: verificar enrollment por id real E por slug
     const isEnrolled = enrolledCourseIds.has(c.id) || enrolledCourseIds.has(c.slug);
     return {
       ...c,
@@ -106,6 +116,10 @@ function Dashboard() {
   const { data: courses = [] } = useQuery({
     queryKey: ["my-courses"],
     queryFn: fetchMyCourses,
+    // BUG 1 FIX: staleTime 0 garante que o dashboard sempre busca dados frescos
+    // do banco quando o aluno navega para cá, detectando remoções de matrícula
+    // feitas pelo admin sem precisar que o aluno faça novo login.
+    staleTime: 0,
   });
   const firstName = me?.profile?.full_name?.split(" ")[0] ?? "aluno";
 

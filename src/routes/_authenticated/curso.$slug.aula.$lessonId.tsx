@@ -67,6 +67,26 @@ function LessonPage() {
   if (!data?.lesson || !courseData)
     return <div className="container mx-auto px-4 py-10 text-muted-foreground">Carregando...</div>;
 
+  // BUG 1 FIX: bloquear acesso se o aluno não possui matrícula ativa no curso.
+  // Isso é verificado em tempo real (staleTime padrão + cache invalidado pelo admin),
+  // garantindo revogação imediata sem novo login.
+  if (!courseData.enrollment) {
+    return (
+      <div className="container mx-auto max-w-2xl px-4 py-12 text-center">
+        <div className="rounded-2xl border border-gold/30 bg-card p-10 shadow-elegant">
+          <Lock className="mx-auto h-12 w-12 text-gold" />
+          <h1 className="mt-4 font-display text-2xl font-bold">Acesso Bloqueado</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Você não possui matrícula ativa neste curso. Solicite a liberação ao administrador.
+          </p>
+          <Button asChild variant="outline" className="mt-6">
+            <Link to="/dashboard">← Voltar ao painel</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const lesson = data.lesson;
   const { status, releaseDate } = computeStatus(
     lesson.release_offset_days,

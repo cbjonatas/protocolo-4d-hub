@@ -280,10 +280,13 @@ export async function fetchFullCourse(slug: string) {
       ? supabase
           .from("enrollments")
           .select("*")
+          // BUG 1 + 2 FIX: buscar matrícula pelo UUID real do curso E pelo slug,
+          // para detectar matrículas criadas antes ou depois do upsert do curso no banco.
           .or(`course_id.eq.${activeCourse.id},course_id.eq.${slug}`)
           .eq("user_id", userId)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
+          .order("enrolled_at", { ascending: false }) // mais recente primeiro
+          .limit(1)                                    // evita erro de maybeSingle() com duplicatas
+      : Promise.resolve({ data: [] }),
     supabase.from("mock_exams").select("*").eq("course_id", activeCourse.id).order("sort_order"),
   ]);
 
@@ -313,8 +316,11 @@ export async function fetchFullCourse(slug: string) {
   const goals = (goalsRes.data && goalsRes.data.length > 0) ? goalsRes.data : DEFAULT_GOALS;
   const exams = (examsRes.data && examsRes.data.length > 0) ? examsRes.data : DEFAULT_EXAMS;
 
-  // Return null if no real enrollment found — computeStatus will use Date.now() as base
-  const enrollment = enrollmentRes.data ?? null;
+  // BUG 1 FIX: enrollment agora vem como array (limit 1) em vez de objeto (maybeSingle).
+  // Pegamos o primeiro item do array, ou null se vazio — sem risco de erro com duplicatas.
+  const enrollment = Array.isArray(enrollmentRes.data)
+    ? (enrollmentRes.data[0] ?? null)
+    : (enrollmentRes.data ?? null);
 
   return {
     course: activeCourse,
