@@ -9,6 +9,7 @@ export interface RegisteredStudent {
   updated_at?: string;
   is_blocked?: boolean;
   password?: string;
+  custom_enrollments?: string[];
 }
 
 export const DEFAULT_ADMIN_USER = {
@@ -84,6 +85,35 @@ export function saveRegisteredStudent(student: RegisteredStudent): RegisteredStu
   }
 }
 
+export function toggleStudentEnrollmentLocal(
+  emailOrId: string,
+  courseSlugOrId: string,
+  enroll: boolean
+): RegisteredStudent[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const current = getRegisteredStudents();
+    const idx = current.findIndex(
+      (s) => s.id === emailOrId || s.email.toLowerCase() === emailOrId.toLowerCase()
+    );
+    if (idx >= 0) {
+      const student = current[idx];
+      const set = new Set(student.custom_enrollments ?? []);
+      if (enroll) {
+        set.add(courseSlugOrId);
+      } else {
+        set.delete(courseSlugOrId);
+      }
+      current[idx].custom_enrollments = Array.from(set);
+      localStorage.setItem("p4d_all_registered_students", JSON.stringify(current));
+    }
+    return current;
+  } catch (e) {
+    console.error("Error toggling local student enrollment:", e);
+    return getRegisteredStudents();
+  }
+}
+
 export function clearAllRegisteredStudents() {
   if (typeof window === "undefined") return;
   try {
@@ -154,3 +184,4 @@ export function isStudentBlocked(emailOrId: string): boolean {
     return false;
   }
 }
+

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { fetchFullCourse } from "@/lib/course-data";
 import { useMe } from "@/components/app-shell";
+import { getRegisteredStudents } from "@/lib/user-registry";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -47,14 +48,21 @@ async function fetchMyCourses() {
     .eq("user_id", u.user.id);
 
   // BUG 2 FIX: indexar matrículas tanto por course_id (UUID real) quanto por slug,
-  // para cobrir matrículas criadas com ID sintético (ex: "protocolo-setembro") antes
-  // do upsert do curso no banco, e matrículas com UUID real após o upsert.
+  // e incluir matrículas salvas no registro local.
   const enrolledCourseIds = new Set<string>();
   for (const e of userEnrollments ?? []) {
     enrolledCourseIds.add(e.course_id);
-    // Adicionar também o slug do curso correspondente a este course_id
     const matchedCourse = (courses ?? []).find((c) => c.id === e.course_id);
     if (matchedCourse?.slug) enrolledCourseIds.add(matchedCourse.slug);
+  }
+
+  const localStudent = getRegisteredStudents().find(
+    (s: any) => s.id === u.user.id || s.email?.toLowerCase() === u.user.email?.toLowerCase()
+  );
+  if (localStudent?.custom_enrollments) {
+    for (const cSlug of localStudent.custom_enrollments) {
+      enrolledCourseIds.add(cSlug);
+    }
   }
 
   let list = [...(courses ?? [])];

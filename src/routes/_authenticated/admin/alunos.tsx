@@ -25,6 +25,7 @@ import {
   updateStudentStatus,
   updateStudentPassword,
   clearAllRegisteredStudents,
+  toggleStudentEnrollmentLocal,
 } from "@/lib/user-registry";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -581,34 +582,20 @@ function StudentRow({
         }
       }
 
-      // 4. Perform Enrollment
-      if (isEnrolled) {
-        const { error: delError } = await supabase
-          .from("enrollments")
-          .delete()
-          .eq("user_id", targetUserId)
-          .eq("course_id", targetCourseId);
+      // 4. Perform Enrollment via RPC to bypass RLS restrictions
+      const action = isEnrolled ? "unenroll" : "enroll";
+      const { data, error: rpcError } = await supabase.rpc("admin_toggle_enrollment", {
+        p_user_id: targetUserId,
+        p_course_id_or_slug: targetCourseId,
+        p_action: action,
+      });
 
-        if (delError) throw new Error("Erro ao remover matrícula: " + delError.message);
-      } else {
-        const { data: existing } = await supabase
-          .from("enrollments")
-          .select("id")
-          .eq("user_id", targetUserId)
-          .eq("course_id", targetCourseId)
-          .maybeSingle();
+      if (rpcError) {
+        throw new Error("Erro RPC ao atualizar matrícula: " + rpcError.message);
+      }
 
-        if (!existing) {
-          const { error: insError } = await supabase.from("enrollments").insert({
-            user_id: targetUserId,
-            course_id: targetCourseId,
-            enrolled_at: new Date().toISOString(),
-          });
-
-          if (insError) {
-            throw new Error("Erro ao salvar matrícula no banco: " + insError.message);
-          }
-        }
+      if (data && data.success === false) {
+        throw new Error("Erro interno ao atualizar matrícula: " + (data.error || "Desconhecido"));
       }
     },
     onSuccess: (_, variables) => {
@@ -633,16 +620,18 @@ function StudentRow({
 
   const deleteStudentMutation = useMutation({
     mutationFn: async () => {
-      // 1. Delete student data across all tables in Supabase DB
-      await supabase.from("enrollments").delete().eq("user_id", student.id);
-      await supabase.from("lesson_progress").delete().eq("user_id", student.id);
-      await supabase.from("goal_progress").delete().eq("user_id", student.id);
-      await supabase.from("exam_progress").delete().eq("user_id", student.id);
-      await supabase.from("user_roles").delete().eq("user_id", student.id);
-      await supabase
-        .from("profiles")
-        .delete()
-        .or(`id.eq.${student.id},email.eq.${student.email}`);
+      // 1. Delete student data across all tables in Supabase DB via RPC (Bypass RLS)
+      const { data, error } = await supabase.rpc("admin_delete_student", {
+        p_user_id: student.id,
+        p_email: student.email,
+      });
+
+      if (error) {
+        throw new Error("Erro RPC ao excluir aluno: " + error.message);
+      }
+      if (data && data.success === false) {
+        throw new Error("Erro interno ao excluir aluno: " + (data.error || "Desconhecido"));
+      }
 
       // 2. Delete from localStorage
       if (typeof window !== "undefined") {
