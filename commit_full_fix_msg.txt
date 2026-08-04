@@ -1,0 +1,5 @@
+fix: full permissive RLS migration for enrollments, courses, user_roles and seed monthly courses
+
+- Seed Agosto, Setembro, Outubro courses into public.courses DB table
+- Grant full authenticated SELECT/INSERT/UPDATE/DELETE RLS policies on enrollments, courses, user_roles
+- Clean up toggleEnrollment mutation in alunos.tsx with precise error handling and safe UUID resolution

@@ -511,31 +511,12 @@ function StudentRow({
       const isUuid = (str: string) =>
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str || "");
 
-      // 1. Ensure current admin user has admin role in DB so RLS policies pass
-      const { data: authResult } = await supabase.auth.getUser();
-      if (authResult?.user) {
-        const adminUid = authResult.user.id;
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("id")
-          .eq("user_id", adminUid)
-          .eq("role", "admin")
-          .maybeSingle();
-
-        if (!roleData) {
-          await supabase.from("user_roles").upsert(
-            { user_id: adminUid, role: "admin" },
-            { onConflict: "user_id,role" }
-          );
-        }
-      }
-
-      // 2. Unblock student if enrolling and currently blocked
+      // 1. Unblock student if enrolling and currently blocked
       if (!isEnrolled && student.is_blocked) {
         updateStudentStatus(student.id || student.email, false);
       }
 
-      // 3. Resolve real student UUID in Supabase
+      // 2. Resolve student real profile UUID in Supabase
       let targetUserId = student.id;
       if (!isUuid(targetUserId)) {
         if (student.email) {
@@ -553,11 +534,11 @@ function StudentRow({
 
       if (!targetUserId || !isUuid(targetUserId)) {
         throw new Error(
-          `O aluno "${student.full_name || student.email}" ainda não possui uma conta registrada no banco de dados. Solicite que o aluno faça o cadastro na página de login.`
+          `O aluno "${student.full_name || student.email}" ainda não possui uma conta de usuário ativa no banco de dados. Peça para o aluno se cadastrar na plataforma.`
         );
       }
 
-      // 4. Resolve real course ID in DB or upsert if missing
+      // 3. Resolve course UUID from database
       const slugMap: Record<string, { slug: string; title: string }> = {
         "protocolo-agosto": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
         "protocolo-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
@@ -570,26 +551,17 @@ function StudentRow({
       const info = slugMap[courseId] || { slug: courseId, title: courseTitle || "Protocolo 4D" };
       let targetCourseId = courseId;
 
-      if (isUuid(courseId)) {
+      if (!isUuid(courseId)) {
         const { data: dbCourse } = await supabase
           .from("courses")
-          .select("id, slug")
-          .eq("id", courseId)
-          .maybeSingle();
-
-        if (dbCourse) {
-          targetCourseId = dbCourse.id;
-        }
-      } else {
-        const { data: dbCourse } = await supabase
-          .from("courses")
-          .select("id, slug")
+          .select("id")
           .eq("slug", info.slug)
           .maybeSingle();
 
-        if (dbCourse) {
+        if (dbCourse?.id) {
           targetCourseId = dbCourse.id;
         } else {
+          // Attempt to create course if not seeded
           const { data: createdCourse, error: createErr } = await supabase
             .from("courses")
             .upsert(
@@ -604,21 +576,21 @@ function StudentRow({
             .select("id")
             .single();
 
-          if (createErr) throw new Error("Erro ao criar curso no banco: " + createErr.message);
+          if (createErr) throw new Error("Erro ao identificar o curso no banco: " + createErr.message);
           targetCourseId = createdCourse.id;
         }
       }
 
-      // 5. Update Enrollment
+      // 4. Perform Enrollment
       if (isEnrolled) {
-        const deleteQuery = isUuid(courseId)
-          ? supabase.from("enrollments").delete().eq("user_id", targetUserId).eq("course_id", courseId)
-          : supabase.from("enrollments").delete().eq("user_id", targetUserId).eq("course_id", targetCourseId);
+        const { error: delError } = await supabase
+          .from("enrollments")
+          .delete()
+          .eq("user_id", targetUserId)
+          .eq("course_id", targetCourseId);
 
-        const { error: delError } = await deleteQuery;
-        if (delError) throw new Error(delError.message);
+        if (delError) throw new Error("Erro ao remover matrícula: " + delError.message);
       } else {
-        // Check if already enrolled to avoid unnecessary insert
         const { data: existing } = await supabase
           .from("enrollments")
           .select("id")
@@ -634,16 +606,7 @@ function StudentRow({
           });
 
           if (insError) {
-            // Fallback to upsert
-            const { error: upsertErr } = await supabase.from("enrollments").upsert(
-              {
-                user_id: targetUserId,
-                course_id: targetCourseId,
-                enrolled_at: new Date().toISOString(),
-              },
-              { onConflict: "user_id,course_id" }
-            );
-            if (upsertErr) throw new Error(insError.message || upsertErr.message);
+            throw new Error("Erro ao salvar matrícula no banco: " + insError.message);
           }
         }
       }
