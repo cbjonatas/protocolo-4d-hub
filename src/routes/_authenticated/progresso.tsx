@@ -43,15 +43,9 @@ async function fetchAllEnrolledCourses() {
 
   const enrolledIds = new Set((enrollments ?? []).map((e) => e.course_id));
 
-  // August is always available (intentional business rule)
   const list = (allCourses ?? []).filter(
-    (c) => enrolledIds.has(c.id) || c.slug === "protocolo-4d"
+    (c) => enrolledIds.has(c.id) || enrolledIds.has(c.slug)
   );
-
-  // Always include August default if no courses in DB
-  if (list.length === 0) {
-    list.push({ id: "protocolo-4d-id", slug: "protocolo-4d", title: "Protocolo 4D — Agosto" } as any);
-  }
 
   return list;
 }

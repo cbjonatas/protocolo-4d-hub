@@ -22,18 +22,10 @@ export const Route = createFileRoute("/auth")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
     if (data.session) {
-      // Check if admin — redirect admins to their own portal, never to student dashboard
       const { data: u } = await supabase.auth.getUser();
-      if (u?.user) {
-        const email = u.user.email?.toLowerCase() ?? "";
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", u.user.id)
-          .eq("role", "admin");
-        const isAdmin =
-          email === "admin@protocolo4d.com" || (roles && roles.length > 0);
-        if (isAdmin) throw redirect({ to: "/admin" });
+      const email = u?.user?.email?.toLowerCase() ?? "";
+      if (email === "admin@protocolo4d.com") {
+        throw redirect({ to: "/admin" });
       }
       throw redirect({ to: "/dashboard" });
     }
@@ -181,21 +173,7 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       return;
     }
 
-    // Block admin accounts from using student login
-    const email = data.user.email?.toLowerCase() ?? "";
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", data.user.id)
-      .eq("role", "admin");
-    const isAdmin =
-      email === "admin@protocolo4d.com" || (roles && roles.length > 0);
     setLoading(false);
-    if (isAdmin) {
-      await supabase.auth.signOut();
-      toast.error("Use o Portal Administrativo para acessar sua conta admin.");
-      return;
-    }
     toast.success("Bem-vindo de volta!");
     onSuccess();
   }
@@ -291,21 +269,6 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
         await supabase
           .from("user_roles")
           .upsert({ user_id: signUpData.user.id, role: "student" }, { onConflict: "user_id,role" });
-
-        const { data: defaultCourse } = await supabase
-          .from("courses")
-          .select("id")
-          .eq("is_active", true)
-          .limit(1)
-          .maybeSingle();
-        if (defaultCourse) {
-          await supabase
-            .from("enrollments")
-            .upsert(
-              { user_id: signUpData.user.id, course_id: defaultCourse.id },
-              { onConflict: "user_id,course_id" },
-            );
-        }
       } catch {}
 
       // 2. Save to global persistent registry p4d_all_registered_students in localStorage

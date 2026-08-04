@@ -280,7 +280,7 @@ export async function fetchFullCourse(slug: string) {
       ? supabase
           .from("enrollments")
           .select("*")
-          .eq("course_id", activeCourse.id)
+          .or(`course_id.eq.${activeCourse.id},course_id.eq.${slug}`)
           .eq("user_id", userId)
           .maybeSingle()
       : Promise.resolve({ data: null }),

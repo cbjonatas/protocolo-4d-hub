@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
         .eq("user_id", u.user.id)
         .eq("role", "admin");
       const hasAdminRole = roles && roles.length > 0;
-      if (!hasAdminRole && (email.includes("admin") || email.startsWith("jhon"))) {
+      if (!hasAdminRole && email === "admin@protocolo4d.com") {
         await supabase
           .from("user_roles")
           .upsert({ user_id: u.user.id, role: "admin" }, { onConflict: "user_id,role" });

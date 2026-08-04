@@ -41,7 +41,7 @@ export function getRegisteredStudents(): RegisteredStudent[] {
       const name = s.full_name?.toLowerCase() ?? "";
 
       // Exclude admin or synthetic placeholder emails
-      if (email.includes("admin") || email.startsWith("jhon") || name.includes("administrador")) {
+      if (email.includes("admin") || name.includes("administrador")) {
         return false;
       }
       if (email === "professorjonatasg@gmail.com") {

@@ -12,6 +12,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { fetchFullCourse, computeStatus, formatReleaseDate, type Status } from "@/lib/course-data";
+import { useMe } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated/curso/$slug/")({
   head: ({ params }) => ({
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_authenticated/curso/$slug/")({
 
 function CoursePage() {
   const { slug } = Route.useParams();
+  const { data: me } = useMe();
   const { data, isLoading } = useQuery({
     queryKey: ["course-full", slug],
     queryFn: () => fetchFullCourse(slug),
@@ -40,8 +42,8 @@ function CoursePage() {
       </div>
     );
 
-  const isAugustDefault = slug === "protocolo-4d";
-  const isLockedForStudent = !isAugustDefault && !data.enrollment && !data.course.is_active;
+  const isAdmin = me?.isAdmin;
+  const isLockedForStudent = !isAdmin && !data.enrollment;
 
   if (isLockedForStudent) {
     return (

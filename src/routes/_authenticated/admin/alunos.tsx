@@ -258,12 +258,33 @@ function AdminStudents() {
   });
 
   const { data: courses = [] } = useQuery({
-    queryKey: ["admin-courses-list"],
+    queryKey: ["admin-courses-list-full"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.from("courses").select("*").eq("is_active", true);
-        if (error || !data) return [];
-        return data;
+        const { data } = await supabase
+          .from("courses")
+          .select("*")
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        const DEFAULT_MONTHS = [
+          { id: "protocolo-agosto", slug: "protocolo-4d", title: "Protocolo 4D — Agosto", is_active: true, sort_order: 1 },
+          { id: "protocolo-setembro", slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro", is_active: false, sort_order: 2 },
+          { id: "protocolo-outubro", slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro", is_active: false, sort_order: 3 },
+        ];
+
+        const map = new Map<string, any>();
+        for (const d of DEFAULT_MONTHS) {
+          map.set(d.slug, d);
+        }
+        for (const c of data ?? []) {
+          if (c.slug === "protocolo-4d" && (c.title === "Protocolo 4D" || c.title === "PROTOCOLO 4D")) {
+            map.set(c.slug, { ...c, title: "Protocolo 4D — Agosto" });
+          } else {
+            map.set(c.slug, c);
+          }
+        }
+        return Array.from(map.values());
       } catch {
         return [];
       }
@@ -492,19 +513,61 @@ function StudentRow({
         updateStudentStatus(student.id || student.email, false);
       }
 
+      // 2. Resolve real course ID in DB or upsert if missing
+      let targetCourseId = courseId;
+      const { data: dbCourse } = await supabase
+        .from("courses")
+        .select("id, slug")
+        .or(`id.eq.${courseId},slug.eq.${courseId}`)
+        .maybeSingle();
+
+      if (dbCourse) {
+        targetCourseId = dbCourse.id;
+      } else {
+        const slugMap: Record<string, { slug: string; title: string }> = {
+          "protocolo-agosto": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
+          "protocolo-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
+          "protocolo-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
+          "protocolo-4d": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
+          "protocolo-4d-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
+          "protocolo-4d-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
+        };
+
+        const info = slugMap[courseId] || { slug: courseId, title: courseTitle || "Protocolo 4D" };
+        const { data: createdCourse, error: createErr } = await supabase
+          .from("courses")
+          .upsert(
+            {
+              slug: info.slug,
+              title: info.title,
+              description: "Protocolo estratégico de preparação em Informática.",
+              is_active: true,
+            },
+            { onConflict: "slug" }
+          )
+          .select("id")
+          .single();
+
+        if (createErr) throw new Error("Erro ao criar curso no banco: " + createErr.message);
+        targetCourseId = createdCourse.id;
+      }
+
       if (isEnrolled) {
         const { error: delError } = await supabase
           .from("enrollments")
           .delete()
           .eq("user_id", student.id)
-          .eq("course_id", courseId);
+          .or(`course_id.eq.${targetCourseId},course_id.eq.${courseId}`);
         if (delError) throw new Error(delError.message);
       } else {
-        const { error: insError } = await supabase.from("enrollments").insert({
-          user_id: student.id,
-          course_id: courseId,
-          enrolled_at: new Date().toISOString(),
-        });
+        const { error: insError } = await supabase.from("enrollments").upsert(
+          {
+            user_id: student.id,
+            course_id: targetCourseId,
+            enrolled_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,course_id" }
+        );
         if (insError) throw new Error(insError.message);
       }
     },
@@ -773,7 +836,7 @@ function StudentRow({
                         (e: any) => e.course_id === c.id || e.course_id === c.slug
                       );
                       return (
-                        <option key={c.id || c.slug} value={c.id}>
+                        <option key={c.id || c.slug} value={c.id || c.slug}>
                           {c.title} {enrolled ? "✓ (Já Matriculado)" : "➔ (Clique para Matricular e Liberar Acesso)"}
                         </option>
                       );
@@ -787,11 +850,10 @@ function StudentRow({
                     const matchingCourse = courses.find(
                       (c: any) => c.slug === m.slug || c.title === m.title
                     );
-                    const courseId = matchingCourse?.id;
+                    const courseId = matchingCourse?.id || m.slug;
                     const isEnrolled = student.enrollments.some(
-                      (e: any) => courseId ? e.course_id === courseId : e.course_id === m.slug
+                      (e: any) => e.course_id === matchingCourse?.id || e.course_id === m.slug
                     );
-                    const canEnroll = !!courseId;
 
                     return (
                       <div
@@ -818,10 +880,9 @@ function StudentRow({
                         <Button
                           size="sm"
                           variant={isEnrolled ? "outline" : "default"}
-                          disabled={toggleEnrollment.isPending || !canEnroll}
-                          title={!canEnroll ? "Curso não encontrado no banco de dados" : undefined}
+                          disabled={toggleEnrollment.isPending}
                           onClick={() =>
-                            courseId && toggleEnrollment.mutate({
+                            toggleEnrollment.mutate({
                               courseId,
                               isEnrolled,
                               courseTitle: m.title,

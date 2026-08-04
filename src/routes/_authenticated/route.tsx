@@ -47,10 +47,6 @@ export const Route = createFileRoute("/_authenticated")({
 
     // If visiting admin routes, verify admin role explicitly
     if (location.pathname.startsWith("/admin")) {
-      if (email === "professorjonatasg@gmail.com") {
-        throw redirect({ to: "/admin-login" });
-      }
-
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")

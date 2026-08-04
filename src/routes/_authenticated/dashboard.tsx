@@ -93,10 +93,7 @@ async function fetchMyCourses() {
   }
 
   return list.map((c) => {
-    // August course (protocolo-4d / protocolo-agosto) is active by default for logged in students.
-    // Subsequent months (Setembro, Outubro...) require explicit enrollment from the admin!
-    const isAugustDefault = c.slug === "protocolo-4d" || c.id === "protocolo-agosto";
-    const isEnrolled = isAugustDefault || enrolledCourseIds.has(c.id);
+    const isEnrolled = enrolledCourseIds.has(c.id) || enrolledCourseIds.has(c.slug);
     return {
       ...c,
       is_enrolled: isEnrolled,

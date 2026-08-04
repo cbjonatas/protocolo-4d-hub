@@ -26,7 +26,7 @@ async function fetchProfile() {
   const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
   const hasAdminRole = (roles ?? []).some((r) => r.role === "admin");
   const email = u.user.email?.toLowerCase() ?? "";
-  const isAdmin = hasAdminRole || email.includes("admin") || email.startsWith("jhon");
+  const isAdmin = hasAdminRole || email === "admin@protocolo4d.com";
 
   return {
     user: u.user,
