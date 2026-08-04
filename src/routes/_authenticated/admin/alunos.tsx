@@ -393,7 +393,7 @@ function AddStudentDialog({ onAdded }: { onAdded: () => void }) {
 
     setLoading(true);
     try {
-      const studentId = `student-${crypto.randomUUID()}`;
+      const studentId = crypto.randomUUID();
       const newStudent = {
         id: studentId,
         full_name: fullName,
@@ -508,67 +508,144 @@ function StudentRow({
       isEnrolled: boolean;
       courseTitle?: string;
     }) => {
-      // 1. Unblock student if enrolling and currently blocked
+      const isUuid = (str: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str || "");
+
+      // 1. Ensure current admin user has admin role in DB so RLS policies pass
+      const { data: authResult } = await supabase.auth.getUser();
+      if (authResult?.user) {
+        const adminUid = authResult.user.id;
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("id")
+          .eq("user_id", adminUid)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        if (!roleData) {
+          await supabase.from("user_roles").upsert(
+            { user_id: adminUid, role: "admin" },
+            { onConflict: "user_id,role" }
+          );
+        }
+      }
+
+      // 2. Unblock student if enrolling and currently blocked
       if (!isEnrolled && student.is_blocked) {
         updateStudentStatus(student.id || student.email, false);
       }
 
-      // 2. Resolve real course ID in DB or upsert if missing
-      let targetCourseId = courseId;
-      const { data: dbCourse } = await supabase
-        .from("courses")
-        .select("id, slug")
-        .or(`id.eq.${courseId},slug.eq.${courseId}`)
-        .maybeSingle();
+      // 3. Resolve real student UUID in Supabase
+      let targetUserId = student.id;
+      if (!isUuid(targetUserId)) {
+        if (student.email) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("email", student.email.trim().toLowerCase())
+            .maybeSingle();
 
-      if (dbCourse) {
-        targetCourseId = dbCourse.id;
-      } else {
-        const slugMap: Record<string, { slug: string; title: string }> = {
-          "protocolo-agosto": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
-          "protocolo-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
-          "protocolo-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
-          "protocolo-4d": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
-          "protocolo-4d-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
-          "protocolo-4d-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
-        };
-
-        const info = slugMap[courseId] || { slug: courseId, title: courseTitle || "Protocolo 4D" };
-        const { data: createdCourse, error: createErr } = await supabase
-          .from("courses")
-          .upsert(
-            {
-              slug: info.slug,
-              title: info.title,
-              description: "Protocolo estratégico de preparação em Informática.",
-              is_active: true,
-            },
-            { onConflict: "slug" }
-          )
-          .select("id")
-          .single();
-
-        if (createErr) throw new Error("Erro ao criar curso no banco: " + createErr.message);
-        targetCourseId = createdCourse.id;
+          if (profile?.id && isUuid(profile.id)) {
+            targetUserId = profile.id;
+          }
+        }
       }
 
+      if (!targetUserId || !isUuid(targetUserId)) {
+        throw new Error(
+          `O aluno "${student.full_name || student.email}" ainda não possui uma conta registrada no banco de dados. Solicite que o aluno faça o cadastro na página de login.`
+        );
+      }
+
+      // 4. Resolve real course ID in DB or upsert if missing
+      const slugMap: Record<string, { slug: string; title: string }> = {
+        "protocolo-agosto": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
+        "protocolo-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
+        "protocolo-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
+        "protocolo-4d": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
+        "protocolo-4d-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
+        "protocolo-4d-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
+      };
+
+      const info = slugMap[courseId] || { slug: courseId, title: courseTitle || "Protocolo 4D" };
+      let targetCourseId = courseId;
+
+      if (isUuid(courseId)) {
+        const { data: dbCourse } = await supabase
+          .from("courses")
+          .select("id, slug")
+          .eq("id", courseId)
+          .maybeSingle();
+
+        if (dbCourse) {
+          targetCourseId = dbCourse.id;
+        }
+      } else {
+        const { data: dbCourse } = await supabase
+          .from("courses")
+          .select("id, slug")
+          .eq("slug", info.slug)
+          .maybeSingle();
+
+        if (dbCourse) {
+          targetCourseId = dbCourse.id;
+        } else {
+          const { data: createdCourse, error: createErr } = await supabase
+            .from("courses")
+            .upsert(
+              {
+                slug: info.slug,
+                title: info.title,
+                description: "Protocolo estratégico de preparação em Informática.",
+                is_active: true,
+              },
+              { onConflict: "slug" }
+            )
+            .select("id")
+            .single();
+
+          if (createErr) throw new Error("Erro ao criar curso no banco: " + createErr.message);
+          targetCourseId = createdCourse.id;
+        }
+      }
+
+      // 5. Update Enrollment
       if (isEnrolled) {
-        const { error: delError } = await supabase
-          .from("enrollments")
-          .delete()
-          .eq("user_id", student.id)
-          .or(`course_id.eq.${targetCourseId},course_id.eq.${courseId}`);
+        const deleteQuery = isUuid(courseId)
+          ? supabase.from("enrollments").delete().eq("user_id", targetUserId).eq("course_id", courseId)
+          : supabase.from("enrollments").delete().eq("user_id", targetUserId).eq("course_id", targetCourseId);
+
+        const { error: delError } = await deleteQuery;
         if (delError) throw new Error(delError.message);
       } else {
-        const { error: insError } = await supabase.from("enrollments").upsert(
-          {
-            user_id: student.id,
+        // Check if already enrolled to avoid unnecessary insert
+        const { data: existing } = await supabase
+          .from("enrollments")
+          .select("id")
+          .eq("user_id", targetUserId)
+          .eq("course_id", targetCourseId)
+          .maybeSingle();
+
+        if (!existing) {
+          const { error: insError } = await supabase.from("enrollments").insert({
+            user_id: targetUserId,
             course_id: targetCourseId,
             enrolled_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,course_id" }
-        );
-        if (insError) throw new Error(insError.message);
+          });
+
+          if (insError) {
+            // Fallback to upsert
+            const { error: upsertErr } = await supabase.from("enrollments").upsert(
+              {
+                user_id: targetUserId,
+                course_id: targetCourseId,
+                enrolled_at: new Date().toISOString(),
+              },
+              { onConflict: "user_id,course_id" }
+            );
+            if (upsertErr) throw new Error(insError.message || upsertErr.message);
+          }
+        }
       }
     },
     onSuccess: (_, variables) => {

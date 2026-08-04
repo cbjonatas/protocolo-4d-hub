@@ -107,13 +107,14 @@ export function updateStudentStatus(studentIdOrEmail: string, isBlocked: boolean
     }
 
     // Sync block status to Supabase profiles table
-    supabase
-      .from("profiles")
-      .update({ is_blocked: isBlocked })
-      .or(`id.eq.${studentIdOrEmail},email.eq.${studentIdOrEmail}`)
-      .then(({ error }) => {
-        if (error) console.warn("Could not sync block status to profiles table:", error.message);
-      });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentIdOrEmail);
+    const query = isUuid
+      ? supabase.from("profiles").update({ is_blocked: isBlocked }).eq("id", studentIdOrEmail)
+      : supabase.from("profiles").update({ is_blocked: isBlocked }).eq("email", studentIdOrEmail.toLowerCase());
+
+    query.then(({ error }) => {
+      if (error) console.warn("Could not sync block status to profiles table:", error.message);
+    });
 
     return current;
   } catch (e) {
