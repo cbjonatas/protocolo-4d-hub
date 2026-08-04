@@ -582,20 +582,24 @@ function StudentRow({
         }
       }
 
-      // 4. Perform Enrollment via RPC to bypass RLS restrictions
-      const action = isEnrolled ? "unenroll" : "enroll";
-      const { data, error: rpcError } = await supabase.rpc("admin_toggle_enrollment", {
-        p_user_id: targetUserId,
-        p_course_id_or_slug: targetCourseId,
-        p_action: action,
-      });
+      // 4. Perform Enrollment via direct DB interaction (Admin RLS policies will handle security)
+      if (isEnrolled) {
+        const { error: delError } = await supabase
+          .from("enrollments")
+          .delete()
+          .eq("user_id", targetUserId)
+          .eq("course_id", targetCourseId);
 
-      if (rpcError) {
-        throw new Error("Erro RPC ao atualizar matrícula: " + rpcError.message);
-      }
+        if (delError) throw new Error("Erro ao remover matrícula: " + delError.message);
+      } else {
+        const { error: insError } = await supabase.from("enrollments").insert({
+          user_id: targetUserId,
+          course_id: targetCourseId,
+        });
 
-      if (data && data.success === false) {
-        throw new Error("Erro interno ao atualizar matrícula: " + (data.error || "Desconhecido"));
+        if (insError) {
+          throw new Error("Erro ao salvar matrícula no banco: " + insError.message);
+        }
       }
     },
     onSuccess: (_, variables) => {
