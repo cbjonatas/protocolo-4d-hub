@@ -696,7 +696,7 @@ function StudentRow({
               <Eye className="mr-1.5 h-4 w-4" /> Detalhes & Ações
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">
                 Gestão do Aluno: {student.full_name}
