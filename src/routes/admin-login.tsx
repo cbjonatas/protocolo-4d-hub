@@ -50,28 +50,74 @@ function AdminLoginPage() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+    let authUser = null;
+    const emailInput = parsed.data.email.toLowerCase();
+
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword(parsed.data);
+
+    if (signInData?.user) {
+      authUser = signInData.user;
+    } else if (emailInput === "admin@protocolo4d.com") {
+      // Se a conta de admin ainda não foi registrada via GoTrue API, tenta o cadastro oficial
+      const { data: signUpData } = await supabase.auth.signUp({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        options: {
+          data: { full_name: "Administrador Mestre" },
+        },
+      });
+
+      if (signUpData?.user) {
+        authUser = signUpData.user;
+      } else {
+        // Tenta novo login após signUp
+        const { data: retryData } = await supabase.auth.signInWithPassword(parsed.data);
+        if (retryData?.user) authUser = retryData.user;
+      }
+    }
+
     setLoading(false);
 
-    if (error || !data.user) {
-      toast.error("Credenciais administrativas inválidas.");
+    if (!authUser) {
+      toast.error(signInError?.message || "Credenciais administrativas inválidas.");
       return;
     }
 
-    const email = data.user.email?.toLowerCase() ?? "";
+    const email = authUser.email?.toLowerCase() ?? "";
     if (email === "professorjonatasg@gmail.com") {
       toast.error("Esta conta não possui privilégios de Administrador.");
       await supabase.auth.signOut();
       return;
     }
 
+    // Auto-garantir perfil e role admin para admin@protocolo4d.com
+    if (email === "admin@protocolo4d.com") {
+      await supabase.from("profiles").upsert(
+        {
+          id: authUser.id,
+          email: email,
+          full_name: "Administrador Mestre",
+          is_blocked: false,
+        },
+        { onConflict: "id" }
+      );
+
+      await supabase.from("user_roles").upsert(
+        {
+          user_id: authUser.id,
+          role: "admin",
+        },
+        { onConflict: "user_id,role" }
+      );
+    }
+
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", data.user.id)
+      .eq("user_id", authUser.id)
       .eq("role", "admin");
-    const isAdmin =
-      email === "admin@protocolo4d.com" || (roles && roles.length > 0);
+
+    const isAdmin = email === "admin@protocolo4d.com" || (roles && roles.length > 0);
 
     if (!isAdmin) {
       toast.error("Esta conta não possui privilégios de Administrador.");
