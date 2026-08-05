@@ -274,19 +274,21 @@ export async function fetchFullCourse(slug: string) {
         is_active: slug === "protocolo-4d",
       };
 
+  const isUuid = (str: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str || "");
+  const hasValidCourseId = isUuid(activeCourse.id);
+
   const [cyclesRes, enrollmentRes, examsRes] = await Promise.all([
     supabase.from("cycles").select("*").eq("course_id", activeCourse.id).order("sort_order"),
-    userId
+    userId && hasValidCourseId
       ? supabase
           .from("enrollments")
           .select("*")
-          // BUG 1 + 2 FIX: buscar matrícula pelo UUID real do curso E pelo slug,
-          // para detectar matrículas criadas antes ou depois do upsert do curso no banco.
-          .or(`course_id.eq.${activeCourse.id},course_id.eq.${slug}`)
+          .eq("course_id", activeCourse.id)
           .eq("user_id", userId)
           .order("enrolled_at", { ascending: false }) // mais recente primeiro
-          .limit(1)                                    // evita erro de maybeSingle() com duplicatas
-      : Promise.resolve({ data: [] }),
+          .limit(1)
+      : Promise.resolve({ data: [] as any }),
     supabase.from("mock_exams").select("*").eq("course_id", activeCourse.id).order("sort_order"),
   ]);
 
