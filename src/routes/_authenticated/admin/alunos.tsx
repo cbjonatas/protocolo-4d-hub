@@ -550,7 +550,6 @@ function StudentRow({
         );
       }
 
-<<<<<<< HEAD
       // 3. Resolve course UUID from database
       const slugMap: Record<string, { slug: string; title: string }> = {
         "protocolo-agosto": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
