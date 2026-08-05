@@ -5,7 +5,6 @@ import {
   adminDeleteStudent,
   adminSetStudentPassword,
   adminSetStudentBlocked,
-  adminEnrollAllStudents,
 } from "@/lib/admin-students.functions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
