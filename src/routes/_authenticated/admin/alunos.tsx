@@ -493,6 +493,10 @@ function StudentRow({
   const [newPassword, setNewPassword] = useState("");
   const [changingPass, setChangingPass] = useState(false);
   const qc = useQueryClient();
+  const toggleEnrollmentFn = useServerFn(adminToggleEnrollment);
+  const deleteStudentFn = useServerFn(adminDeleteStudent);
+  const setPasswordFn = useServerFn(adminSetStudentPassword);
+  const setBlockedFn = useServerFn(adminSetStudentBlocked);
 
   const cleanPhone = student.whatsapp?.replace(/\D/g, "");
   const createdDate = student.created_at
