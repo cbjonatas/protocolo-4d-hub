@@ -539,64 +539,15 @@ function StudentRow({
         );
       }
 
-      // 3. Resolve course UUID from database
-      const slugMap: Record<string, { slug: string; title: string }> = {
-        "protocolo-agosto": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
-        "protocolo-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
-        "protocolo-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
-        "protocolo-4d": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
-        "protocolo-4d-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
-        "protocolo-4d-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
-      };
-
-      const info = slugMap[courseId] || { slug: courseId, title: courseTitle || "Protocolo 4D" };
-      let targetCourseId = courseId;
-
-      if (!isUuid(courseId)) {
-        const { data: dbCourse } = await supabase
-          .from("courses")
-          .select("id")
-          .eq("slug", info.slug)
-          .maybeSingle();
-
-        if (dbCourse?.id) {
-          targetCourseId = dbCourse.id;
-        } else {
-          // Attempt to create course if not seeded
-          const { data: createdCourse, error: createErr } = await supabase
-            .from("courses")
-            .upsert(
-              {
-                slug: info.slug,
-                title: info.title,
-                description: "Protocolo estratégico de preparação em Informática.",
-                is_active: true,
-              },
-              { onConflict: "slug" }
-            )
-            .select("id")
-            .single();
-
-          if (createErr) throw new Error("Erro ao identificar o curso no banco: " + createErr.message);
-          targetCourseId = createdCourse.id;
-        }
-      }
-
-      // 4. Perform Enrollment via RPC to bypass RLS restrictions
-      const action = isEnrolled ? "unenroll" : "enroll";
-      const { data, error: rpcError } = await supabase.rpc("admin_toggle_enrollment", {
-        p_user_id: targetUserId,
-        p_course_id_or_slug: targetCourseId,
-        p_action: action,
+      // 3. Enrollment handled server-side (resolves slug/uuid and bypasses RLS safely)
+      await toggleEnrollmentFn({
+        data: {
+          userId: targetUserId,
+          courseIdOrSlug: courseId,
+          action: isEnrolled ? "unenroll" : "enroll",
+        },
       });
-
-      if (rpcError) {
-        throw new Error("Erro RPC ao atualizar matrícula: " + rpcError.message);
-      }
-
-      if (data && data.success === false) {
-        throw new Error("Erro interno ao atualizar matrícula: " + (data.error || "Desconhecido"));
-      }
+      void courseTitle;
     },
     onSuccess: (_, variables) => {
       if (variables.isEnrolled) {
