@@ -571,18 +571,8 @@ function StudentRow({
 
   const deleteStudentMutation = useMutation({
     mutationFn: async () => {
-      // 1. Delete student data across all tables in Supabase DB via RPC (Bypass RLS)
-      const { data, error } = await supabase.rpc("admin_delete_student", {
-        p_user_id: student.id,
-        p_email: student.email,
-      });
-
-      if (error) {
-        throw new Error("Erro RPC ao excluir aluno: " + error.message);
-      }
-      if (data && data.success === false) {
-        throw new Error("Erro interno ao excluir aluno: " + (data.error || "Desconhecido"));
-      }
+      // 1. Delete student data + auth account server-side
+      await deleteStudentFn({ data: { userId: student.id, email: student.email } });
 
       // 2. Delete from localStorage
       if (typeof window !== "undefined") {
@@ -604,9 +594,15 @@ function StudentRow({
     onError: (e: any) => toast.error(e.message || "Erro ao remover aluno."),
   });
 
-  function handleToggleBlock() {
+  async function handleToggleBlock() {
     const nextStatus = !student.is_blocked;
     updateStudentStatus(student.id || student.email, nextStatus);
+    try {
+      await setBlockedFn({ data: { userId: student.id, blocked: nextStatus } });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao atualizar status do aluno.");
+      return;
+    }
     toast.success(
       nextStatus
         ? `Acesso do aluno ${student.full_name} bloqueado!`
@@ -615,18 +611,26 @@ function StudentRow({
     onUpdated();
   }
 
-  function handleSavePassword(e: React.FormEvent) {
+  async function handleSavePassword(e: React.FormEvent) {
     e.preventDefault();
     if (!newPassword || newPassword.length < 6) {
       toast.error("A nova senha deve ter pelo menos 6 caracteres.");
       return;
     }
     setChangingPass(true);
-    updateStudentPassword(student.id || student.email, newPassword);
-    toast.success(`Senha do aluno ${student.full_name} alterada com sucesso!`);
-    setNewPassword("");
-    setChangingPass(false);
-    onUpdated();
+    try {
+      await setPasswordFn({ data: { userId: student.id, password: newPassword } });
+      updateStudentPassword(student.id || student.email, newPassword);
+      toast.success(
+        `Senha do aluno ${student.full_name} alterada com sucesso! Ele já pode entrar com a nova senha.`
+      );
+      setNewPassword("");
+      onUpdated();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao alterar a senha do aluno.");
+    } finally {
+      setChangingPass(false);
+    }
   }
 
   return (
