@@ -19,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fetchFullCourse, DEFAULT_GOALS, computeStatus, formatReleaseDate } from "@/lib/course-data";
 import { PdfViewer } from "@/components/pdf-viewer";
+import { useMe } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated/curso/$slug/meta/$goalId")({
   head: () => ({
@@ -249,11 +250,12 @@ function GoalPage() {
     return Math.round(((current + (finished ? 1 : 0)) / questions.length) * 100);
   }, [current, finished, questions]);
 
+  const { data: me } = useMe();
   if (!goal || !courseData)
     return <div className="container mx-auto px-4 py-10 text-muted-foreground">Carregando...</div>;
 
-  // BUG 1 FIX: bloquear acesso direto por URL se matrícula foi removida.
-  if (!courseData.enrollment) {
+  const isAdmin = me?.isAdmin;
+  if (!courseData.enrollment && !isAdmin) {
     return (
       <div className="container mx-auto max-w-2xl px-4 py-12 text-center">
         <div className="rounded-2xl border border-gold/30 bg-card p-10 shadow-elegant">

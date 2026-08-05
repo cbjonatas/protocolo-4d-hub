@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { fetchFullCourse, DEFAULT_EXAMS, computeStatus, formatReleaseDate } from "@/lib/course-data";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { VideoPlayer } from "@/components/video-player";
+import { useMe } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated/curso/$slug/simulado/$examId")({
   head: () => ({
@@ -29,6 +30,7 @@ function ExamPage() {
   const { slug, examId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { data: me } = useMe();
   const [openPdf, setOpenPdf] = useState<{ path: string; title: string } | null>(null);
   const [openVideo, setOpenVideo] = useState(false);
   const { data: courseData } = useQuery({
@@ -71,8 +73,8 @@ function ExamPage() {
   if (!exam || !courseData)
     return <div className="container mx-auto px-4 py-10 text-muted-foreground">Carregando...</div>;
 
-  // BUG 1 FIX: bloquear acesso direto por URL se matrícula foi removida.
-  if (!courseData.enrollment) {
+  const isAdmin = me?.isAdmin;
+  if (!courseData.enrollment && !isAdmin) {
     return (
       <div className="container mx-auto max-w-2xl px-4 py-12 text-center">
         <div className="rounded-2xl border border-gold/30 bg-card p-10 shadow-elegant">

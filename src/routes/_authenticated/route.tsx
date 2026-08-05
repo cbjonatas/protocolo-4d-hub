@@ -17,29 +17,27 @@ export const Route = createFileRoute("/_authenticated")({
 
     const email = data.user.email?.toLowerCase() ?? "";
 
-    // If visiting student routes, verify student is REGISTERED in admin management and NOT blocked
+    // If visiting student routes, verify profile exists (auto-create if missing) and check block status
     if (!location.pathname.startsWith("/admin")) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("id, is_blocked")
-        .or(`id.eq.${data.user.id},email.eq.${email}`)
+        .eq("id", data.user.id)
         .maybeSingle();
 
-      const localStudent = getRegisteredStudents().find(
-        (s: any) => s.id === data.user.id || s.email?.toLowerCase() === email
-      );
-
-      // Rule: NO USER CAN ACCESS UNLESS REGISTERED IN ADMIN MANAGEMENT
-      if (!profile && !localStudent) {
-        await supabase.auth.signOut();
-        throw redirect({ to: "/auth", search: { unapproved: "1" } });
-      }
-
-      // Rule: NO BLOCKED USER CAN ACCESS
-      const isBlockedInDb = profile?.is_blocked === true;
-      const isBlockedInLocal = localStudent?.is_blocked === true || isStudentBlocked(email) || isStudentBlocked(data.user.id);
-
-      if (isBlockedInDb || isBlockedInLocal) {
+      if (!profile) {
+        // Auto-create profile for authenticated user
+        await supabase.from("profiles").upsert(
+          {
+            id: data.user.id,
+            email: email,
+            full_name: data.user.user_metadata?.full_name ?? email.split("@")[0],
+            whatsapp: data.user.user_metadata?.whatsapp ?? "",
+            is_blocked: false,
+          },
+          { onConflict: "id" }
+        );
+      } else if (profile.is_blocked || isStudentBlocked(email) || isStudentBlocked(data.user.id)) {
         await supabase.auth.signOut();
         throw redirect({ to: "/auth", search: { blocked: "1" } });
       }

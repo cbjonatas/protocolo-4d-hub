@@ -633,8 +633,9 @@ function StudentRow({
       if (error) {
         throw new Error("Erro RPC ao excluir aluno: " + error.message);
       }
-      if (data && data.success === false) {
-        throw new Error("Erro interno ao excluir aluno: " + (data.error || "Desconhecido"));
+      const resObj = data as any;
+      if (resObj && resObj.success === false) {
+        throw new Error("Erro interno ao excluir aluno: " + (resObj.error || "Desconhecido"));
       }
 
       // 2. Delete from localStorage

@@ -611,6 +611,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_student: {
+        Args: { p_user_id: string; p_email?: string }
+        Returns: Json
+      }
+      admin_toggle_enrollment: {
+        Args: { p_user_id?: string; p_course_id_or_slug?: string; p_action?: string; args?: Json }
+        Returns: Json
+      }
       delete_course: { Args: { p_course_id: string }; Returns: undefined }
       duplicate_course: {
         Args: { p_course_id: string; p_new_slug: string; p_new_title: string }

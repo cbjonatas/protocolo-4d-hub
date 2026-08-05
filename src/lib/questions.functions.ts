@@ -14,7 +14,7 @@ async function assertAdmin(supabase: any, userId: string) {
 
 export const generateQuestionsFromPdf = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => GenerateInput.parse(input))
+  .validator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     await assertAdmin(supabase, context.userId);
@@ -132,7 +132,7 @@ export const generateQuestionsFromPdf = createServerFn({ method: "POST" })
 
 export const publishGoalQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z.object({ goalId: z.string().uuid(), publish: z.boolean() }).parse(input),
   )
   .handler(async ({ data, context }) => {

@@ -127,30 +127,6 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       return;
     }
 
-    // Check DB profiles and localStudent registry for admin management registration
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("id, is_blocked")
-      .eq("email", parsed.data.email)
-      .maybeSingle();
-
-    const localStudent = getRegisteredStudents().find(
-      (s: any) => s.email?.toLowerCase() === parsed.data.email.toLowerCase()
-    );
-
-    const isStudentEmail = parsed.data.email.toLowerCase() !== "admin@protocolo4d.com";
-
-    // Block sign in if not registered in admin management
-    if (isStudentEmail && !prof && !localStudent) {
-      toast.error("Seu usuário ainda não possui cadastro no Painel do Administrador. Entre em contato com o suporte.");
-      return;
-    }
-
-    if (prof?.is_blocked || localStudent?.is_blocked || isStudentBlocked(parsed.data.email)) {
-      toast.error("Sua conta está bloqueada pelo administrador. Entre em contato com o suporte.");
-      return;
-    }
-
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
     if (error || !data.user) {
@@ -159,14 +135,27 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       return;
     }
 
-    // Verify user profile block status
+    const email = data.user.email?.toLowerCase() ?? "";
+
+    // Verify or auto-create profile in Supabase DB
     const { data: userProf } = await supabase
       .from("profiles")
-      .select("is_blocked")
+      .select("id, is_blocked")
       .eq("id", data.user.id)
       .maybeSingle();
 
-    if (userProf?.is_blocked) {
+    if (!userProf) {
+      await supabase.from("profiles").upsert(
+        {
+          id: data.user.id,
+          email: email,
+          full_name: data.user.user_metadata?.full_name ?? email.split("@")[0],
+          whatsapp: data.user.user_metadata?.whatsapp ?? "",
+          is_blocked: false,
+        },
+        { onConflict: "id" }
+      );
+    } else if (userProf.is_blocked || isStudentBlocked(email)) {
       setLoading(false);
       await supabase.auth.signOut();
       toast.error("Sua conta foi desativada pelo administrador. Entre em contato com o suporte.");
@@ -269,9 +258,26 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
         await supabase
           .from("user_roles")
           .upsert({ user_id: signUpData.user.id, role: "student" }, { onConflict: "user_id,role" });
+
+        // Auto-enroll in default active course in DB
+        const { data: defaultCourse } = await supabase
+          .from("courses")
+          .select("id")
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+
+        if (defaultCourse) {
+          await supabase
+            .from("enrollments")
+            .upsert(
+              { user_id: signUpData.user.id, course_id: defaultCourse.id },
+              { onConflict: "user_id,course_id" }
+            );
+        }
       } catch {}
 
-      // 2. Save to global persistent registry p4d_all_registered_students in localStorage
+      // 2. Save to local registry cache
       try {
         saveRegisteredStudent(studentRecord);
       } catch (e) {

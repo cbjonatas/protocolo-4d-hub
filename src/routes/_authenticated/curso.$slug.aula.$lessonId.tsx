@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { fetchFullCourse, DEFAULT_LESSONS, computeStatus, formatReleaseDate } from "@/lib/course-data";
 import { VideoPlayer } from "@/components/video-player";
 import { PdfViewer } from "@/components/pdf-viewer";
+import { useMe } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated/curso/$slug/aula/$lessonId")({
   head: () => ({
@@ -30,6 +31,7 @@ function LessonPage() {
   const { slug, lessonId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { data: me } = useMe();
   const { data: courseData } = useQuery({
     queryKey: ["course-full", slug],
     queryFn: () => fetchFullCourse(slug),
@@ -67,10 +69,8 @@ function LessonPage() {
   if (!data?.lesson || !courseData)
     return <div className="container mx-auto px-4 py-10 text-muted-foreground">Carregando...</div>;
 
-  // BUG 1 FIX: bloquear acesso se o aluno não possui matrícula ativa no curso.
-  // Isso é verificado em tempo real (staleTime padrão + cache invalidado pelo admin),
-  // garantindo revogação imediata sem novo login.
-  if (!courseData.enrollment) {
+  const isAdmin = me?.isAdmin;
+  if (!courseData.enrollment && !isAdmin) {
     return (
       <div className="container mx-auto max-w-2xl px-4 py-12 text-center">
         <div className="rounded-2xl border border-gold/30 bg-card p-10 shadow-elegant">
