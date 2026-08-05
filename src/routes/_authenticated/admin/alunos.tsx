@@ -1,4 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  adminToggleEnrollment,
+  adminDeleteStudent,
+  adminSetStudentPassword,
+  adminSetStudentBlocked,
+} from "@/lib/admin-students.functions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -493,6 +500,10 @@ function StudentRow({
   const [newPassword, setNewPassword] = useState("");
   const [changingPass, setChangingPass] = useState(false);
   const qc = useQueryClient();
+  const toggleEnrollmentFn = useServerFn(adminToggleEnrollment);
+  const deleteStudentFn = useServerFn(adminDeleteStudent);
+  const setPasswordFn = useServerFn(adminSetStudentPassword);
+  const setBlockedFn = useServerFn(adminSetStudentBlocked);
 
   const cleanPhone = student.whatsapp?.replace(/\D/g, "");
   const createdDate = student.created_at
@@ -539,64 +550,15 @@ function StudentRow({
         );
       }
 
-      // 3. Resolve course UUID from database
-      const slugMap: Record<string, { slug: string; title: string }> = {
-        "protocolo-agosto": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
-        "protocolo-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
-        "protocolo-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
-        "protocolo-4d": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
-        "protocolo-4d-setembro": { slug: "protocolo-4d-setembro", title: "Protocolo 4D — Setembro" },
-        "protocolo-4d-outubro": { slug: "protocolo-4d-outubro", title: "Protocolo 4D — Outubro" },
-      };
-
-      const info = slugMap[courseId] || { slug: courseId, title: courseTitle || "Protocolo 4D" };
-      let targetCourseId = courseId;
-
-      if (!isUuid(courseId)) {
-        const { data: dbCourse } = await supabase
-          .from("courses")
-          .select("id")
-          .eq("slug", info.slug)
-          .maybeSingle();
-
-        if (dbCourse?.id) {
-          targetCourseId = dbCourse.id;
-        } else {
-          // Attempt to create course if not seeded
-          const { data: createdCourse, error: createErr } = await supabase
-            .from("courses")
-            .upsert(
-              {
-                slug: info.slug,
-                title: info.title,
-                description: "Protocolo estratégico de preparação em Informática.",
-                is_active: true,
-              },
-              { onConflict: "slug" }
-            )
-            .select("id")
-            .single();
-
-          if (createErr) throw new Error("Erro ao identificar o curso no banco: " + createErr.message);
-          targetCourseId = createdCourse.id;
-        }
-      }
-
-      // 4. Perform Enrollment via RPC to bypass RLS restrictions
-      const action = isEnrolled ? "unenroll" : "enroll";
-      const { data, error: rpcError } = await supabase.rpc("admin_toggle_enrollment", {
-        p_user_id: targetUserId,
-        p_course_id_or_slug: targetCourseId,
-        p_action: action,
+      // 3. Enrollment handled server-side (resolves slug/uuid and bypasses RLS safely)
+      await toggleEnrollmentFn({
+        data: {
+          userId: targetUserId,
+          courseIdOrSlug: courseId,
+          action: isEnrolled ? "unenroll" : "enroll",
+        },
       });
-
-      if (rpcError) {
-        throw new Error("Erro RPC ao atualizar matrícula: " + rpcError.message);
-      }
-
-      if (data && data.success === false) {
-        throw new Error("Erro interno ao atualizar matrícula: " + (data.error || "Desconhecido"));
-      }
+      void courseTitle;
     },
     onSuccess: (_, variables) => {
       if (variables.isEnrolled) {
@@ -620,18 +582,8 @@ function StudentRow({
 
   const deleteStudentMutation = useMutation({
     mutationFn: async () => {
-      // 1. Delete student data across all tables in Supabase DB via RPC (Bypass RLS)
-      const { data, error } = await supabase.rpc("admin_delete_student", {
-        p_user_id: student.id,
-        p_email: student.email,
-      });
-
-      if (error) {
-        throw new Error("Erro RPC ao excluir aluno: " + error.message);
-      }
-      if (data && data.success === false) {
-        throw new Error("Erro interno ao excluir aluno: " + (data.error || "Desconhecido"));
-      }
+      // 1. Delete student data + auth account server-side
+      await deleteStudentFn({ data: { userId: student.id, email: student.email } });
 
       // 2. Delete from localStorage
       if (typeof window !== "undefined") {
@@ -653,9 +605,15 @@ function StudentRow({
     onError: (e: any) => toast.error(e.message || "Erro ao remover aluno."),
   });
 
-  function handleToggleBlock() {
+  async function handleToggleBlock() {
     const nextStatus = !student.is_blocked;
     updateStudentStatus(student.id || student.email, nextStatus);
+    try {
+      await setBlockedFn({ data: { userId: student.id, blocked: nextStatus } });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao atualizar status do aluno.");
+      return;
+    }
     toast.success(
       nextStatus
         ? `Acesso do aluno ${student.full_name} bloqueado!`
@@ -664,18 +622,26 @@ function StudentRow({
     onUpdated();
   }
 
-  function handleSavePassword(e: React.FormEvent) {
+  async function handleSavePassword(e: React.FormEvent) {
     e.preventDefault();
     if (!newPassword || newPassword.length < 6) {
       toast.error("A nova senha deve ter pelo menos 6 caracteres.");
       return;
     }
     setChangingPass(true);
-    updateStudentPassword(student.id || student.email, newPassword);
-    toast.success(`Senha do aluno ${student.full_name} alterada com sucesso!`);
-    setNewPassword("");
-    setChangingPass(false);
-    onUpdated();
+    try {
+      await setPasswordFn({ data: { userId: student.id, password: newPassword } });
+      updateStudentPassword(student.id || student.email, newPassword);
+      toast.success(
+        `Senha do aluno ${student.full_name} alterada com sucesso! Ele já pode entrar com a nova senha.`
+      );
+      setNewPassword("");
+      onUpdated();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao alterar a senha do aluno.");
+    } finally {
+      setChangingPass(false);
+    }
   }
 
   return (

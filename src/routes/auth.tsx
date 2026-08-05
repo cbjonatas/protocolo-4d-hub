@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { saveRegisteredStudent, isStudentBlocked, getRegisteredStudents } from "@/lib/user-registry";
+import { saveRegisteredStudent } from "@/lib/user-registry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,29 +127,9 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       return;
     }
 
-    // Check DB profiles and localStudent registry for admin management registration
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("id, is_blocked")
-      .eq("email", parsed.data.email)
-      .maybeSingle();
+    // O login depende apenas da conta de autenticação. O bloqueio administrativo
+    // é verificado após a autenticação (a tabela de perfis não é legível antes do login).
 
-    const localStudent = getRegisteredStudents().find(
-      (s: any) => s.email?.toLowerCase() === parsed.data.email.toLowerCase()
-    );
-
-    const isStudentEmail = parsed.data.email.toLowerCase() !== "admin@protocolo4d.com";
-
-    // Block sign in if not registered in admin management
-    if (isStudentEmail && !prof && !localStudent) {
-      toast.error("Seu usuário ainda não possui cadastro no Painel do Administrador. Entre em contato com o suporte.");
-      return;
-    }
-
-    if (prof?.is_blocked || localStudent?.is_blocked || isStudentBlocked(parsed.data.email)) {
-      toast.error("Sua conta está bloqueada pelo administrador. Entre em contato com o suporte.");
-      return;
-    }
 
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
