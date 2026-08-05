@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { saveRegisteredStudent, isStudentBlocked, getRegisteredStudents } from "@/lib/user-registry";
+import { saveRegisteredStudent } from "@/lib/user-registry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,6 +126,9 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       toast.error(parsed.error.issues[0].message);
       return;
     }
+
+    // O login depende apenas da conta de autenticação. O bloqueio administrativo
+    // é verificado após a autenticação (a tabela de perfis não é legível antes do login).
 
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword(parsed.data);

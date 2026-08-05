@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { isStudentBlocked, getRegisteredStudents } from "@/lib/user-registry";
 import { AppShell } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -17,7 +16,7 @@ export const Route = createFileRoute("/_authenticated")({
 
     const email = data.user.email?.toLowerCase() ?? "";
 
-    // If visiting student routes, verify profile exists (auto-create if missing) and check block status
+    // Rotas de aluno: o acesso depende apenas da conta autenticada; auto-criamos o perfil se necessário
     if (!location.pathname.startsWith("/admin")) {
       const { data: profile } = await supabase
         .from("profiles")
@@ -42,6 +41,7 @@ export const Route = createFileRoute("/_authenticated")({
         throw redirect({ to: "/auth", search: { blocked: "1" } });
       }
     }
+
 
     // If visiting admin routes, verify admin role explicitly
     if (location.pathname.startsWith("/admin")) {

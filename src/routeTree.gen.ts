@@ -9,36 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as AdminLoginRouteImport } from './routes/admin-login'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminLoginRouteImport } from './routes/admin-login'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProgressoRouteImport } from './routes/_authenticated/progresso'
+import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
-import { Route as AuthenticatedAdminAlunosRouteImport } from './routes/_authenticated/admin/alunos'
-import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin/cursos'
 import { Route as AuthenticatedCursoSlugRouteImport } from './routes/_authenticated/curso.$slug'
+import { Route as AuthenticatedAdminCursosRouteImport } from './routes/_authenticated/admin/cursos'
+import { Route as AuthenticatedAdminAlunosRouteImport } from './routes/_authenticated/admin/alunos'
 import { Route as AuthenticatedCursoSlugIndexRouteImport } from './routes/_authenticated/curso.$slug.index'
-import { Route as AuthenticatedCursoSlugAulaLessonIdRouteImport } from './routes/_authenticated/curso.$slug.aula.$lessonId'
-import { Route as AuthenticatedCursoSlugMetaGoalIdRouteImport } from './routes/_authenticated/curso.$slug.meta.$goalId'
 import { Route as AuthenticatedCursoSlugSimuladoExamIdRouteImport } from './routes/_authenticated/curso.$slug.simulado.$examId'
+import { Route as AuthenticatedCursoSlugMetaGoalIdRouteImport } from './routes/_authenticated/curso.$slug.meta.$goalId'
+import { Route as AuthenticatedCursoSlugAulaLessonIdRouteImport } from './routes/_authenticated/curso.$slug.aula.$lessonId'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminLoginRoute = AdminLoginRouteImport.update({
-  id: '/admin-login',
-  path: '/admin-login',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -46,19 +37,23 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin-login',
+  path: '/admin-login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedProgressoRoute = AuthenticatedProgressoRouteImport.update({
+  id: '/progresso',
+  path: '/progresso',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
@@ -66,9 +61,14 @@ const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
   path: '/perfil',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedProgressoRoute = AuthenticatedProgressoRouteImport.update({
-  id: '/progresso',
-  path: '/progresso',
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
@@ -76,33 +76,33 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
-const AuthenticatedAdminAlunosRoute =
-  AuthenticatedAdminAlunosRouteImport.update({
-    id: '/alunos',
-    path: '/alunos',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
+const AuthenticatedCursoSlugRoute = AuthenticatedCursoSlugRouteImport.update({
+  id: '/curso/$slug',
+  path: '/curso/$slug',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminCursosRoute =
   AuthenticatedAdminCursosRouteImport.update({
     id: '/cursos',
     path: '/cursos',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedCursoSlugRoute = AuthenticatedCursoSlugRouteImport.update({
-  id: '/curso/$slug',
-  path: '/curso/$slug',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+const AuthenticatedAdminAlunosRoute =
+  AuthenticatedAdminAlunosRouteImport.update({
+    id: '/alunos',
+    path: '/alunos',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedCursoSlugIndexRoute =
   AuthenticatedCursoSlugIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedCursoSlugRoute,
   } as any)
-const AuthenticatedCursoSlugAulaLessonIdRoute =
-  AuthenticatedCursoSlugAulaLessonIdRouteImport.update({
-    id: '/aula/$lessonId',
-    path: '/aula/$lessonId',
+const AuthenticatedCursoSlugSimuladoExamIdRoute =
+  AuthenticatedCursoSlugSimuladoExamIdRouteImport.update({
+    id: '/simulado/$examId',
+    path: '/simulado/$examId',
     getParentRoute: () => AuthenticatedCursoSlugRoute,
   } as any)
 const AuthenticatedCursoSlugMetaGoalIdRoute =
@@ -111,10 +111,10 @@ const AuthenticatedCursoSlugMetaGoalIdRoute =
     path: '/meta/$goalId',
     getParentRoute: () => AuthenticatedCursoSlugRoute,
   } as any)
-const AuthenticatedCursoSlugSimuladoExamIdRoute =
-  AuthenticatedCursoSlugSimuladoExamIdRouteImport.update({
-    id: '/simulado/$examId',
-    path: '/simulado/$examId',
+const AuthenticatedCursoSlugAulaLessonIdRoute =
+  AuthenticatedCursoSlugAulaLessonIdRouteImport.update({
+    id: '/aula/$lessonId',
+    path: '/aula/$lessonId',
     getParentRoute: () => AuthenticatedCursoSlugRoute,
   } as any)
 
@@ -238,25 +238,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin-login': {
-      id: '/admin-login'
-      path: '/admin-login'
-      fullPath: '/admin-login'
-      preLoaderRoute: typeof AdminLoginRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -266,25 +252,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
+    '/admin-login': {
+      id: '/admin-login'
+      path: '/admin-login'
+      fullPath: '/admin-login'
+      preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/progresso': {
+      id: '/_authenticated/progresso'
+      path: '/progresso'
+      fullPath: '/progresso'
+      preLoaderRoute: typeof AuthenticatedProgressoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/perfil': {
@@ -294,11 +287,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPerfilRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/progresso': {
-      id: '/_authenticated/progresso'
-      path: '/progresso'
-      fullPath: '/progresso'
-      preLoaderRoute: typeof AuthenticatedProgressoRouteImport
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/': {
@@ -308,12 +308,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/admin/alunos': {
-      id: '/_authenticated/admin/alunos'
-      path: '/alunos'
-      fullPath: '/admin/alunos'
-      preLoaderRoute: typeof AuthenticatedAdminAlunosRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
+    '/_authenticated/curso/$slug': {
+      id: '/_authenticated/curso/$slug'
+      path: '/curso/$slug'
+      fullPath: '/curso/$slug'
+      preLoaderRoute: typeof AuthenticatedCursoSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/cursos': {
       id: '/_authenticated/admin/cursos'
@@ -322,12 +322,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCursosRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/curso/$slug': {
-      id: '/_authenticated/curso/$slug'
-      path: '/curso/$slug'
-      fullPath: '/curso/$slug'
-      preLoaderRoute: typeof AuthenticatedCursoSlugRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/_authenticated/admin/alunos': {
+      id: '/_authenticated/admin/alunos'
+      path: '/alunos'
+      fullPath: '/admin/alunos'
+      preLoaderRoute: typeof AuthenticatedAdminAlunosRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/curso/$slug/': {
       id: '/_authenticated/curso/$slug/'
@@ -336,11 +336,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCursoSlugIndexRouteImport
       parentRoute: typeof AuthenticatedCursoSlugRoute
     }
-    '/_authenticated/curso/$slug/aula/$lessonId': {
-      id: '/_authenticated/curso/$slug/aula/$lessonId'
-      path: '/aula/$lessonId'
-      fullPath: '/curso/$slug/aula/$lessonId'
-      preLoaderRoute: typeof AuthenticatedCursoSlugAulaLessonIdRouteImport
+    '/_authenticated/curso/$slug/simulado/$examId': {
+      id: '/_authenticated/curso/$slug/simulado/$examId'
+      path: '/simulado/$examId'
+      fullPath: '/curso/$slug/simulado/$examId'
+      preLoaderRoute: typeof AuthenticatedCursoSlugSimuladoExamIdRouteImport
       parentRoute: typeof AuthenticatedCursoSlugRoute
     }
     '/_authenticated/curso/$slug/meta/$goalId': {
@@ -350,11 +350,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCursoSlugMetaGoalIdRouteImport
       parentRoute: typeof AuthenticatedCursoSlugRoute
     }
-    '/_authenticated/curso/$slug/simulado/$examId': {
-      id: '/_authenticated/curso/$slug/simulado/$examId'
-      path: '/simulado/$examId'
-      fullPath: '/curso/$slug/simulado/$examId'
-      preLoaderRoute: typeof AuthenticatedCursoSlugSimuladoExamIdRouteImport
+    '/_authenticated/curso/$slug/aula/$lessonId': {
+      id: '/_authenticated/curso/$slug/aula/$lessonId'
+      path: '/aula/$lessonId'
+      fullPath: '/curso/$slug/aula/$lessonId'
+      preLoaderRoute: typeof AuthenticatedCursoSlugAulaLessonIdRouteImport
       parentRoute: typeof AuthenticatedCursoSlugRoute
     }
   }
@@ -430,13 +430,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

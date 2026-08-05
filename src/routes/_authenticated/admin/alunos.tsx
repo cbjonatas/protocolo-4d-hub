@@ -1,4 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  adminToggleEnrollment,
+  adminDeleteStudent,
+  adminSetStudentPassword,
+  adminSetStudentBlocked,
+} from "@/lib/admin-students.functions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -493,6 +500,10 @@ function StudentRow({
   const [newPassword, setNewPassword] = useState("");
   const [changingPass, setChangingPass] = useState(false);
   const qc = useQueryClient();
+  const toggleEnrollmentFn = useServerFn(adminToggleEnrollment);
+  const deleteStudentFn = useServerFn(adminDeleteStudent);
+  const setPasswordFn = useServerFn(adminSetStudentPassword);
+  const setBlockedFn = useServerFn(adminSetStudentBlocked);
 
   const cleanPhone = student.whatsapp?.replace(/\D/g, "");
   const createdDate = student.created_at
@@ -539,6 +550,7 @@ function StudentRow({
         );
       }
 
+<<<<<<< HEAD
       // 3. Resolve course UUID from database
       const slugMap: Record<string, { slug: string; title: string }> = {
         "protocolo-agosto": { slug: "protocolo-4d", title: "Protocolo 4D — Agosto" },
@@ -582,7 +594,7 @@ function StudentRow({
         }
       }
 
-      // 4. Perform Enrollment via direct DB interaction (Admin RLS policies will handle security)
+      // 4. Perform Enrollment via direct DB interaction (Admin RLS policies handle security)
       if (isEnrolled) {
         const { error: delError } = await supabase
           .from("enrollments")
@@ -610,13 +622,10 @@ function StudentRow({
           `Matrícula realizada e acesso liberado com sucesso para ${variables.courseTitle ?? "o curso"}!`
         );
       }
-      // BUG 1 FIX: invalidar TODOS os caches de curso para que o aluno perca
-      // acesso imediatamente após a remoção de matrícula, sem precisar fazer novo login.
-      // O cache ["course-full", slug] é o que controla se enrollment existe na view do aluno.
       qc.invalidateQueries({ queryKey: ["admin-students-full"] });
       qc.invalidateQueries({ queryKey: ["admin-courses-list-full"] });
       qc.invalidateQueries({ queryKey: ["my-courses"] });
-      qc.invalidateQueries({ queryKey: ["course-full"] }); // invalida todos os slugs
+      qc.invalidateQueries({ queryKey: ["course-full"] });
       onUpdated();
     },
     onError: (e: any) => toast.error(e.message || "Erro ao atualizar matrícula."),
@@ -658,9 +667,15 @@ function StudentRow({
     onError: (e: any) => toast.error(e.message || "Erro ao remover aluno."),
   });
 
-  function handleToggleBlock() {
+  async function handleToggleBlock() {
     const nextStatus = !student.is_blocked;
     updateStudentStatus(student.id || student.email, nextStatus);
+    try {
+      await setBlockedFn({ data: { userId: student.id, blocked: nextStatus } });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao atualizar status do aluno.");
+      return;
+    }
     toast.success(
       nextStatus
         ? `Acesso do aluno ${student.full_name} bloqueado!`
@@ -669,18 +684,26 @@ function StudentRow({
     onUpdated();
   }
 
-  function handleSavePassword(e: React.FormEvent) {
+  async function handleSavePassword(e: React.FormEvent) {
     e.preventDefault();
     if (!newPassword || newPassword.length < 6) {
       toast.error("A nova senha deve ter pelo menos 6 caracteres.");
       return;
     }
     setChangingPass(true);
-    updateStudentPassword(student.id || student.email, newPassword);
-    toast.success(`Senha do aluno ${student.full_name} alterada com sucesso!`);
-    setNewPassword("");
-    setChangingPass(false);
-    onUpdated();
+    try {
+      await setPasswordFn({ data: { userId: student.id, password: newPassword } });
+      updateStudentPassword(student.id || student.email, newPassword);
+      toast.success(
+        `Senha do aluno ${student.full_name} alterada com sucesso! Ele já pode entrar com a nova senha.`
+      );
+      setNewPassword("");
+      onUpdated();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao alterar a senha do aluno.");
+    } finally {
+      setChangingPass(false);
+    }
   }
 
   return (
