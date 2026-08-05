@@ -528,19 +528,17 @@ function StudentRow({
         updateStudentStatus(student.id || student.email, false);
       }
 
-      // 2. Resolve student real profile UUID in Supabase
-      let targetUserId = student.id;
-      if (!isUuid(targetUserId)) {
-        if (student.email) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("email", student.email.trim().toLowerCase())
-            .maybeSingle();
+      // 2. Resolve student real profile UUID in Supabase by email
+      let targetUserId = "";
+      if (student.email) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", student.email.trim().toLowerCase())
+          .maybeSingle();
 
-          if (profile?.id && isUuid(profile.id)) {
-            targetUserId = profile.id;
-          }
+        if (profile?.id && isUuid(profile.id)) {
+          targetUserId = profile.id;
         }
       }
 
