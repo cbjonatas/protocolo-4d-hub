@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION public.admin_set_student_password(p_user_id UUID, p_n
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = public, auth, extensions
 AS $$
 BEGIN
   -- Verificar se o chamador da função é um administrador
