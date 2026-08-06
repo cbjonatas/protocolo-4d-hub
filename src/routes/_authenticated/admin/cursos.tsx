@@ -1153,12 +1153,12 @@ function GoalEditor({ goal, onSaved }: { goal: any; onSaved: () => void }) {
             <div className="rounded-lg border border-border bg-background/60 p-4">
               <Label>Quantidade de questões a gerar</Label>
               <div className="mt-2 flex gap-2">
-                <Input id={`count-${goal.id}`} type="number" min={1} max={30} defaultValue={10} />
+                <Input id={`count-${goal.id}`} type="number" min={1} defaultValue={10} />
                 <Button
                   className="bg-gradient-primary shadow-glow"
                   onClick={() => {
                     const el = document.getElementById(`count-${goal.id}`) as HTMLInputElement;
-                    const count = Math.max(1, Math.min(30, Number(el?.value) || 10));
+                    const count = Math.max(1, Number(el?.value) || 10);
                     gen.mutate(count);
                   }}
                   disabled={gen.isPending || !goal.pdf_path}

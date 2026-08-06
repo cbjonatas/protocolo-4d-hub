@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const GenerateInput = z.object({
   goalId: z.string().uuid(),
-  count: z.number().int().min(1).max(30).default(10),
+  count: z.number().int().min(1).default(10),
 });
 
 async function assertAdmin(supabase: any, userId: string) {
