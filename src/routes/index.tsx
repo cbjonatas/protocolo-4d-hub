@@ -14,6 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   ssr: false,
   beforeLoad: async () => {
+    if (typeof window !== "undefined" && (window.location.hash.includes("type=recovery") || window.location.href.includes("type=recovery"))) {
+      throw redirect({ to: "/reset-password" });
+    }
     const { data } = await supabase.auth.getSession();
     if (data.session) throw redirect({ to: "/dashboard" });
   },

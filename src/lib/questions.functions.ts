@@ -96,12 +96,15 @@ export const generateQuestionsFromPdf = createServerFn({ method: "POST" })
     const questions: any[] = Array.isArray(parsed?.questions) ? parsed.questions : [];
     if (questions.length === 0) throw new Error("Nenhuma questão foi gerada.");
 
+    // Limit questions to request count to avoid AI overgeneration
+    const limitedQuestions = questions.slice(0, data.count);
+
     // Wipe drafts (unpublished) and insert new
     await supabase.from("questions").delete().eq("goal_id", goal.id).eq("is_published", false);
 
     let inserted = 0;
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
+    for (let i = 0; i < limitedQuestions.length; i++) {
+      const q = limitedQuestions[i];
       if (!q?.statement || !Array.isArray(q?.options)) continue;
       const { data: qRow, error: qErr } = await supabase
         .from("questions")

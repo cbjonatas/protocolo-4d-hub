@@ -115,11 +115,17 @@ export const adminSetStudentPassword = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
-      password: data.password,
+    
+    const { data: rpcData, error } = await context.supabase.rpc("admin_set_student_password", {
+      p_user_id: data.userId,
+      p_new_password: data.password,
     });
+    
     if (error) throw new Error("Não foi possível alterar a senha: " + error.message);
+    if (rpcData && (rpcData as any).success === false) {
+      throw new Error("Não foi possível alterar a senha: " + ((rpcData as any).error || "Erro desconhecido"));
+    }
+    
     return { success: true };
   });
 
@@ -130,8 +136,7 @@ export const adminSetStudentBlocked = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
+    const { error } = await context.supabase
       .from("profiles")
       .update({ is_blocked: data.blocked })
       .eq("id", data.userId);

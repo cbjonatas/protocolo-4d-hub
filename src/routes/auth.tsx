@@ -20,6 +20,9 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   validateSearch: authSearchSchema,
   beforeLoad: async () => {
+    if (typeof window !== "undefined" && (window.location.hash.includes("type=recovery") || window.location.href.includes("type=recovery"))) {
+      throw redirect({ to: "/reset-password" });
+    }
     const { data } = await supabase.auth.getSession();
     if (data.session) {
       const { data: u } = await supabase.auth.getUser();
