@@ -116,10 +116,13 @@ export const adminSetStudentPassword = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     
-    const { data: rpcData, error } = await context.supabase.rpc("admin_set_student_password", {
-      p_user_id: data.userId,
-      p_new_password: data.password,
-    });
+    const { data: rpcData, error } = await (context.supabase.rpc as any)(
+      "admin_set_student_password",
+      {
+        p_user_id: data.userId,
+        p_new_password: data.password,
+      },
+    );
     
     if (error) throw new Error("Não foi possível alterar a senha: " + error.message);
     if (rpcData && (rpcData as any).success === false) {
