@@ -5,6 +5,7 @@ import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { saveRegisteredStudent, isStudentBlocked } from "@/lib/user-registry";
+import { claimDeviceSession } from "@/lib/device-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ const authSearchSchema = z.object({
   tab: z.enum(["signin", "signup"]).optional(),
   blocked: z.string().optional(),
   unapproved: z.string().optional(),
+  kicked: z.string().optional(),
 });
 
 export const Route = createFileRoute("/auth")({
