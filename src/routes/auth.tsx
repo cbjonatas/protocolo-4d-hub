@@ -353,6 +353,13 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
       } catch (e) {
         console.error("Error saving student to local registry:", e);
       }
+
+      // 3. Registrar sessão deste dispositivo
+      try {
+        await claimDeviceSession(true);
+      } catch (e) {
+        console.error("Error claiming device session:", e);
+      }
     }
 
     toast.success("Conta criada! Bem-vindo à plataforma.");
