@@ -14,6 +14,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { validateDeviceSession, releaseDeviceSession } from "@/lib/device-session";
+import { toast } from "sonner";
 
 async function fetchProfile() {
   const { data: u } = await supabase.auth.getUser();
