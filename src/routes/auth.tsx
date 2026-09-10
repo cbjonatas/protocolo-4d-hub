@@ -5,6 +5,7 @@ import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { saveRegisteredStudent, isStudentBlocked } from "@/lib/user-registry";
+import { claimDeviceSession } from "@/lib/device-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ const authSearchSchema = z.object({
   tab: z.enum(["signin", "signup"]).optional(),
   blocked: z.string().optional(),
   unapproved: z.string().optional(),
+  kicked: z.string().optional(),
 });
 
 export const Route = createFileRoute("/auth")({
@@ -82,6 +84,14 @@ function AuthPage() {
           </div>
         )}
 
+        {search.kicked === "1" && (
+          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/15 p-4 text-center text-xs font-bold text-amber-400">
+            🔐 Sua sessão foi encerrada porque sua conta foi acessada em outro dispositivo.
+          </div>
+        )}
+
+
+
         <div className="rounded-2xl tactical-card p-6 md:p-8 shadow-elegant">
           <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
             <TabsList className="grid w-full grid-cols-2 bg-background/80 p-1 border border-gold/20">
@@ -120,6 +130,7 @@ const signInSchema = z.object({
 function SignInForm({ onSuccess }: { onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [conflict, setConflict] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -168,9 +179,62 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
       return;
     }
 
+    // Controle de dispositivo único (contas de aluno)
+    if (email !== "admin@protocolo4d.com") {
+      const claim = await claimDeviceSession(false);
+      if (claim === "conflict") {
+        setLoading(false);
+        setConflict(true);
+        return;
+      }
+    }
+
     setLoading(false);
     toast.success("Bem-vindo de volta!");
     onSuccess();
+  }
+
+  async function takeOverSession() {
+    setLoading(true);
+    await claimDeviceSession(true);
+    setLoading(false);
+    setConflict(false);
+    toast.success("Sessão anterior encerrada. Bem-vindo de volta!");
+    onSuccess();
+  }
+
+  async function cancelTakeOver() {
+    setConflict(false);
+    await supabase.auth.signOut();
+  }
+
+  if (conflict) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/15 p-4 text-center text-xs font-bold text-amber-400">
+          ⚠️ Sua conta já está conectada em outro dispositivo.
+        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          Só é permitido um dispositivo conectado por vez. Você pode encerrar a sessão anterior e
+          continuar neste dispositivo.
+        </p>
+        <Button
+          type="button"
+          onClick={takeOverSession}
+          disabled={loading}
+          className="w-full bg-gradient-primary shadow-glow"
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            "Encerrar sessão anterior e entrar neste dispositivo"
+          )}
+        </Button>
+        <Button type="button" variant="outline" className="w-full" onClick={cancelTakeOver}>
+          Cancelar
+        </Button>
+      </div>
+    );
   }
 
   if (showForgot) return <ForgotPasswordForm onCancel={() => setShowForgot(false)} />;

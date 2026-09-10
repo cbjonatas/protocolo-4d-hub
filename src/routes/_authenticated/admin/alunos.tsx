@@ -631,7 +631,7 @@ function StudentRow({
   const deleteStudentMutation = useMutation({
     mutationFn: async () => {
       // 1. Delete student data across all tables in Supabase DB via RPC (Bypass RLS)
-      const { data, error } = await supabase.rpc("admin_delete_student", {
+      const { data, error } = await (supabase.rpc as any)("admin_delete_student", {
         p_user_id: student.id,
         p_email: student.email,
       });

@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { isStudentBlocked } from "@/lib/user-registry";
+import { validateDeviceSession } from "@/lib/device-session";
 import { AppShell } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -42,6 +43,26 @@ export const Route = createFileRoute("/_authenticated")({
         throw redirect({ to: "/auth", search: { blocked: "1" } });
       }
     }
+
+    // Sessão única por dispositivo (rotas de aluno)
+    if (!location.pathname.startsWith("/admin")) {
+      const stillValid = await validateDeviceSession();
+      if (!stillValid) {
+        const { data: adminRoles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .eq("role", "admin");
+        const isAdminUser =
+          email === "admin@protocolo4d.com" || (adminRoles && adminRoles.length > 0);
+        if (!isAdminUser) {
+          await supabase.auth.signOut();
+          throw redirect({ to: "/auth", search: { kicked: "1" } });
+        }
+      }
+    }
+
+
 
 
     // If visiting admin routes, verify admin role explicitly

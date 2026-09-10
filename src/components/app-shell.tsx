@@ -14,6 +14,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { validateDeviceSession, releaseDeviceSession } from "@/lib/device-session";
+import { toast } from "sonner";
 
 async function fetchProfile() {
   const { data: u } = await supabase.auth.getUser();
@@ -57,9 +59,36 @@ export function AppShell({ children }: { children: ReactNode }) {
     setOpen(false);
   }, [pathname]);
 
+  // Verificação periódica: se a conta foi assumida em outro dispositivo, encerra o acesso aqui.
+  useEffect(() => {
+    if (data?.isAdmin) return;
+    let cancelled = false;
+
+    async function check() {
+      const stillValid = await validateDeviceSession();
+      if (cancelled || stillValid) return;
+      await qc.cancelQueries();
+      qc.clear();
+      await supabase.auth.signOut();
+      toast.error("Sua sessão foi encerrada porque sua conta foi acessada em outro dispositivo.");
+      navigate({ to: "/auth", search: { kicked: "1" }, replace: true });
+    }
+
+    const interval = setInterval(check, 60_000);
+    const onFocus = () => void check();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [data?.isAdmin, navigate, qc]);
+
   async function handleSignOut() {
     await qc.cancelQueries();
     qc.clear();
+    await releaseDeviceSession();
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   }
