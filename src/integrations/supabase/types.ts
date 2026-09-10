@@ -606,11 +606,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          last_activity: string
+          status: string
+          updated_at: string
+          user_agent: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: string
+          last_activity?: string
+          status?: string
+          updated_at?: string
+          user_agent?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          last_activity?: string
+          status?: string
+          updated_at?: string
+          user_agent?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      claim_user_session: {
+        Args: { p_device_id: string; p_force?: boolean; p_user_agent?: string }
+        Returns: string
+      }
       delete_course: { Args: { p_course_id: string }; Returns: undefined }
       duplicate_course: {
         Args: { p_course_id: string; p_new_slug: string; p_new_title: string }
@@ -623,6 +660,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      release_user_session: {
+        Args: { p_device_id: string }
+        Returns: undefined
+      }
+      validate_user_session: { Args: { p_device_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "student"
