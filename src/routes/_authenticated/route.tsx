@@ -43,6 +43,26 @@ export const Route = createFileRoute("/_authenticated")({
       }
     }
 
+    // Sessão única por dispositivo (rotas de aluno)
+    if (!location.pathname.startsWith("/admin")) {
+      const stillValid = await validateDeviceSession();
+      if (!stillValid) {
+        const { data: adminRoles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .eq("role", "admin");
+        const isAdminUser =
+          email === "admin@protocolo4d.com" || (adminRoles && adminRoles.length > 0);
+        if (!isAdminUser) {
+          await supabase.auth.signOut();
+          throw redirect({ to: "/auth", search: { kicked: "1" } });
+        }
+      }
+    }
+
+
+
 
     // If visiting admin routes, verify admin role explicitly
     if (location.pathname.startsWith("/admin")) {
