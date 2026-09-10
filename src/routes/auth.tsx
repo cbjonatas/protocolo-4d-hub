@@ -84,6 +84,14 @@ function AuthPage() {
           </div>
         )}
 
+        {search.kicked === "1" && (
+          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/15 p-4 text-center text-xs font-bold text-amber-400">
+            🔐 Sua sessão foi encerrada porque sua conta foi acessada em outro dispositivo.
+          </div>
+        )}
+
+
+
         <div className="rounded-2xl tactical-card p-6 md:p-8 shadow-elegant">
           <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
             <TabsList className="grid w-full grid-cols-2 bg-background/80 p-1 border border-gold/20">
