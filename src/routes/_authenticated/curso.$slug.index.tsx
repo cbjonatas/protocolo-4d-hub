@@ -150,10 +150,13 @@ function CoursePage() {
                   );
                 })}
                 {cGoals.map((g) => {
+                  const isCompleted = data.goalProgress.has(g.id);
+                  const isInProgress = !isCompleted && data.inProgressGoals?.has(g.id);
                   const { status, releaseDate } = computeStatus(
                     g.release_offset_days,
                     enrolledAt,
-                    data.goalProgress.has(g.id),
+                    isCompleted,
+                    isInProgress,
                   );
                   return (
                     <ItemRow

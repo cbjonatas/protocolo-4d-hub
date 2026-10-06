@@ -176,11 +176,201 @@ function GoalPage() {
     },
   });
 
+  const { data: inProgressAttempt } = useQuery({
+    queryKey: ["goal-in-progress", goalId],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data: attempt } = await supabase
+        .from("question_attempts")
+        .select("id, total, created_at")
+        .eq("goal_id", goalId)
+        .eq("user_id", u.user.id)
+        .is("finished_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!attempt) return null;
+
+      const { data: answersData } = await supabase
+        .from("question_answers")
+        .select("question_id, selected_option_id, created_at")
+        .eq("attempt_id", attempt.id);
+
+      const map: Record<string, string> = {};
+      (answersData ?? []).forEach((r: any) => {
+        if (r.question_id && r.selected_option_id) {
+          map[r.question_id] = r.selected_option_id;
+        }
+      });
+
+      return {
+        attemptId: attempt.id,
+        answers: map,
+      };
+    },
+  });
+
   // Quiz state
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [activeAttemptId, setActiveAttemptId] = useState<string | null>(null);
+  const [loadedInitial, setLoadedInitial] = useState(false);
   const [current, setCurrent] = useState(0);
   const [finished, setFinished] = useState<null | { correct: number; total: number }>(null);
   const [openPdf, setOpenPdf] = useState(false);
+
+  // Recupera respostas e última questão acessada ao entrar na meta
+  useEffect(() => {
+    if (loadedInitial) return;
+
+    let initialMap: Record<string, string> = {};
+
+    // 1. Respostas salvas no Supabase (banco de dados)
+    if (inProgressAttempt?.answers && Object.keys(inProgressAttempt.answers).length > 0) {
+      initialMap = { ...inProgressAttempt.answers };
+      setActiveAttemptId(inProgressAttempt.attemptId);
+    }
+
+    // 2. Backup do localStorage
+    try {
+      const rawLocal = localStorage.getItem(`p4d_goal_answers_${goalId}`);
+      if (rawLocal) {
+        const parsed = JSON.parse(rawLocal);
+        initialMap = { ...parsed, ...initialMap };
+      }
+    } catch {}
+
+    if (Object.keys(initialMap).length > 0) {
+      setAnswers(initialMap);
+    }
+
+    // 3. Recupera última questão acessada
+    try {
+      const lastQStr = localStorage.getItem(`p4d_last_q_${goalId}`);
+      if (lastQStr !== null && questions && questions.length > 0) {
+        const idx = parseInt(lastQStr, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < questions.length) {
+          setCurrent(idx);
+        }
+      } else if (questions && questions.length > 0 && Object.keys(initialMap).length > 0) {
+        const firstUnanswered = questions.findIndex((q) => !initialMap[q.id]);
+        if (firstUnanswered !== -1) {
+          setCurrent(firstUnanswered);
+        }
+      }
+    } catch {}
+
+    if (inProgressAttempt !== undefined) {
+      setLoadedInitial(true);
+    }
+  }, [inProgressAttempt, goalId, questions, loadedInitial]);
+
+  // Salva automaticamente cada alternativa selecionada no banco de dados e localmente
+  async function handleSelectOption(questionId: string, optionId: string) {
+    const updatedAnswers = { ...answers, [questionId]: optionId };
+    setAnswers(updatedAnswers);
+
+    try {
+      localStorage.setItem(`p4d_goal_answers_${goalId}`, JSON.stringify(updatedAnswers));
+      localStorage.setItem(`p4d_last_q_${goalId}`, String(current));
+    } catch {}
+
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+
+      const isUuid = (s: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || "");
+
+      const currentQ = questions?.find((q) => q.id === questionId);
+      const opt = currentQ?.options?.find((o) => o.id === optionId);
+      const isCorrect = !!opt?.is_correct;
+
+      if (isUuid(goalId) && isUuid(questionId) && isUuid(optionId)) {
+        // Tenta função RPC atômica se disponível
+        const { data: rpcRes, error: rpcErr } = await supabase.rpc("save_goal_question_answer", {
+          p_goal_id: goalId,
+          p_question_id: questionId,
+          p_selected_option_id: optionId,
+          p_total_questions: questions?.length ?? 0,
+        });
+
+        if (!rpcErr && rpcRes && (rpcRes as any).success) {
+          if ((rpcRes as any).attempt_id) {
+            setActiveAttemptId((rpcRes as any).attempt_id);
+          }
+          qc.invalidateQueries({ queryKey: ["course-full", slug] });
+          return;
+        }
+
+        // Fallback: Query direta no Supabase
+        let attemptId = activeAttemptId;
+        if (!attemptId) {
+          const { data: existingAtt } = await supabase
+            .from("question_attempts")
+            .select("id")
+            .eq("user_id", u.user.id)
+            .eq("goal_id", goalId)
+            .is("finished_at", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (existingAtt) {
+            attemptId = existingAtt.id;
+          } else {
+            const { data: newAtt } = await supabase
+              .from("question_attempts")
+              .insert({
+                user_id: u.user.id,
+                goal_id: goalId,
+                total: questions?.length ?? 0,
+                correct_count: 0,
+                finished_at: null,
+              })
+              .select("id")
+              .single();
+            if (newAtt) attemptId = newAtt.id;
+          }
+          if (attemptId) setActiveAttemptId(attemptId);
+        }
+
+        if (attemptId) {
+          const { data: existingAns } = await supabase
+            .from("question_answers")
+            .select("id")
+            .eq("attempt_id", attemptId)
+            .eq("question_id", questionId)
+            .maybeSingle();
+
+          if (existingAns) {
+            await supabase
+              .from("question_answers")
+              .update({
+                selected_option_id: optionId,
+                is_correct: isCorrect,
+                created_at: new Date().toISOString(),
+              })
+              .eq("id", existingAns.id);
+          } else {
+            await supabase
+              .from("question_answers")
+              .insert({
+                attempt_id: attemptId,
+                question_id: questionId,
+                selected_option_id: optionId,
+                is_correct: isCorrect,
+                created_at: new Date().toISOString(),
+              });
+          }
+          qc.invalidateQueries({ queryKey: ["course-full", slug] });
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao salvar resposta no banco:", e);
+    }
+  }
 
   const complete = useMutation({
     mutationFn: async (done: boolean) => {
@@ -215,28 +405,52 @@ function GoalPage() {
         };
       });
       const correct = rows.filter((r) => r.is_correct).length;
+      const isUuid = (s: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || "");
 
-      const { data: att, error: attErr } = await supabase
-        .from("question_attempts")
-        .insert({
-          user_id: u.user.id,
-          goal_id: goalId,
-          total: questions.length,
-          correct_count: correct,
-          finished_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
-      if (attErr || !att) throw new Error(attErr?.message);
+      let finalAttemptId = activeAttemptId;
 
-      await supabase
-        .from("question_answers")
-        .insert(rows.map((r) => ({ ...r, attempt_id: att.id })));
+      if (finalAttemptId && isUuid(finalAttemptId)) {
+        await supabase
+          .from("question_attempts")
+          .update({
+            total: questions.length,
+            correct_count: correct,
+            finished_at: new Date().toISOString(),
+          })
+          .eq("id", finalAttemptId);
+      } else if (isUuid(goalId)) {
+        const { data: att, error: attErr } = await supabase
+          .from("question_attempts")
+          .insert({
+            user_id: u.user.id,
+            goal_id: goalId,
+            total: questions.length,
+            correct_count: correct,
+            finished_at: new Date().toISOString(),
+          })
+          .select("id")
+          .single();
+        if (attErr || !att) throw new Error(attErr?.message);
+        finalAttemptId = att.id;
+
+        await supabase
+          .from("question_answers")
+          .insert(rows.map((r) => ({ ...r, attempt_id: finalAttemptId! })));
+      }
+
+      try {
+        localStorage.removeItem(`p4d_last_q_${goalId}`);
+        localStorage.removeItem(`p4d_goal_answers_${goalId}`);
+      } catch {}
+
       return { correct, total: questions.length };
     },
     onSuccess: (res) => {
       setFinished(res);
       qc.invalidateQueries({ queryKey: ["goal-attempts", goalId] });
+      qc.invalidateQueries({ queryKey: ["goal-in-progress", goalId] });
+      qc.invalidateQueries({ queryKey: ["course-full", slug] });
       if (res.correct >= Math.ceil(res.total * 0.7) && !courseData?.goalProgress.has(goalId)) {
         complete.mutate(true);
       }
@@ -245,10 +459,14 @@ function GoalPage() {
     onError: (e: any) => toast.error(e.message ?? "Erro ao salvar tentativa."),
   });
 
+  const answeredCount = Object.keys(answers).length;
+  const isGoalCompleted = !!courseData?.goalProgress.has(goal?.id ?? "");
+  const isGoalInProgress = !isGoalCompleted && !finished && answeredCount > 0;
+
   const percent = useMemo(() => {
     if (!questions || questions.length === 0) return 0;
-    return Math.round(((current + (finished ? 1 : 0)) / questions.length) * 100);
-  }, [current, finished, questions]);
+    return Math.round((answeredCount / questions.length) * 100);
+  }, [answeredCount, questions]);
 
   const { data: me } = useMe();
   if (!goal || !courseData)

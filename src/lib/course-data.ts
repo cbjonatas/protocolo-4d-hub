@@ -6,12 +6,14 @@ export function computeStatus(
   releaseOffsetDays: number,
   enrolledAt: string | undefined,
   completed: boolean,
+  inProgress?: boolean,
 ): { status: Status; releaseDate: Date | null } {
   const baseTime = enrolledAt ? new Date(enrolledAt).getTime() : Date.now();
   const release = new Date(baseTime + releaseOffsetDays * 86400_000);
   const now = new Date();
   if (completed) return { status: "completed", releaseDate: release };
   if (release > now) return { status: "locked", releaseDate: release };
+  if (inProgress) return { status: "in_progress", releaseDate: release };
   return { status: "available", releaseDate: release };
 }
 
@@ -295,7 +297,7 @@ export async function fetchFullCourse(slug: string) {
   const dbCycles = cyclesRes.data ?? [];
   const cycleIds = dbCycles.map((c) => c.id);
 
-  const [lessonsRes, goalsRes, lessonProgRes, goalProgRes, examProgRes] = await Promise.all([
+  const [lessonsRes, goalsRes, lessonProgRes, goalProgRes, inProgressGoalsRes, examProgRes] = await Promise.all([
     cycleIds.length
       ? supabase.from("lessons").select("*").in("cycle_id", cycleIds).order("sort_order")
       : Promise.resolve({ data: [] }),
@@ -307,6 +309,13 @@ export async function fetchFullCourse(slug: string) {
       : Promise.resolve({ data: [] }),
     userId
       ? supabase.from("goal_progress").select("*").eq("user_id", userId)
+      : Promise.resolve({ data: [] }),
+    userId
+      ? supabase
+          .from("question_attempts")
+          .select("goal_id")
+          .eq("user_id", userId)
+          .is("finished_at", null)
       : Promise.resolve({ data: [] }),
     userId
       ? supabase.from("exam_progress").select("*").eq("user_id", userId)
@@ -333,6 +342,7 @@ export async function fetchFullCourse(slug: string) {
     exams,
     lessonProgress: new Set((lessonProgRes.data ?? []).map((r: any) => r.lesson_id)),
     goalProgress: new Set((goalProgRes.data ?? []).map((r: any) => r.goal_id)),
+    inProgressGoals: new Set((inProgressGoalsRes.data ?? []).map((r: any) => r.goal_id)),
     examProgress: new Set((examProgRes.data ?? []).map((r: any) => r.exam_id)),
   };
 }

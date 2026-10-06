@@ -22,29 +22,48 @@ export function getDeviceId(): string {
 
 /**
  * Registra este dispositivo como a sessão ativa do usuário.
- * Retorna "conflict" quando já existe outra sessão ativa e force = false.
+ * Retorna:
+ * - "ok": sessão registrada com sucesso
+ * - "conflict": já existe outra sessão ativa e force = false
+ * - "error": falha na comunicação ou autenticação
  */
-export async function claimDeviceSession(force = false): Promise<"ok" | "conflict"> {
+export async function claimDeviceSession(force = false): Promise<"ok" | "conflict" | "error"> {
   const deviceId = getDeviceId();
-  if (!deviceId) return "ok";
-  const { data, error } = await supabase.rpc("claim_user_session", {
-    p_device_id: deviceId,
-    p_force: force,
-    p_user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "",
-  });
-  if (error) return "ok"; // nunca bloquear o acesso por falha de infraestrutura
-  return data === "conflict" ? "conflict" : "ok";
+  if (!deviceId) return force ? "error" : "ok";
+  try {
+    const { data, error } = await supabase.rpc("claim_user_session", {
+      p_device_id: deviceId,
+      p_force: force,
+      p_user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+    });
+    if (error) {
+      console.error("[claimDeviceSession] Erro RPC Supabase:", error);
+      return force ? "error" : "ok";
+    }
+    return data === "conflict" ? "conflict" : "ok";
+  } catch (err) {
+    console.error("[claimDeviceSession] Exceção:", err);
+    return force ? "error" : "ok";
+  }
 }
 
 /** Confirma se este dispositivo ainda é a sessão ativa e atualiza a última atividade. */
 export async function validateDeviceSession(): Promise<boolean> {
   const deviceId = getDeviceId();
   if (!deviceId) return true;
-  const { data, error } = await supabase.rpc("validate_user_session", {
-    p_device_id: deviceId,
-  });
-  if (error) return true;
-  return data === true;
+  try {
+    const { data, error } = await supabase.rpc("validate_user_session", {
+      p_device_id: deviceId,
+    });
+    if (error) {
+      console.error("[validateDeviceSession] Erro RPC Supabase:", error);
+      return true; // Não bloqueia o aluno por instabilidade transitória de rede
+    }
+    return data === true;
+  } catch (err) {
+    console.error("[validateDeviceSession] Exceção:", err);
+    return true;
+  }
 }
 
 /** Encerra a sessão deste dispositivo (logout), liberando a conta. */
@@ -57,3 +76,4 @@ export async function releaseDeviceSession(): Promise<void> {
     /* ignorar */
   }
 }
+

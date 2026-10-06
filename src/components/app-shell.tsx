@@ -74,7 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       navigate({ to: "/auth", search: { kicked: "1" }, replace: true });
     }
 
-    const interval = setInterval(check, 60_000);
+    const interval = setInterval(check, 30_000);
     const onFocus = () => void check();
     window.addEventListener("focus", onFocus);
 

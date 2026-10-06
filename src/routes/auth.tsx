@@ -5,7 +5,7 @@ import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { saveRegisteredStudent, isStudentBlocked } from "@/lib/user-registry";
-import { claimDeviceSession } from "@/lib/device-session";
+import { claimDeviceSession, validateDeviceSession } from "@/lib/device-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +32,11 @@ export const Route = createFileRoute("/auth")({
       if (email === "admin@protocolo4d.com") {
         throw redirect({ to: "/admin" });
       }
-      throw redirect({ to: "/dashboard" });
+      // Redireciona para o dashboard apenas se este dispositivo for a sessão ativa
+      const isValid = await validateDeviceSession();
+      if (isValid) {
+        throw redirect({ to: "/dashboard" });
+      }
     }
   },
   head: () => ({
@@ -131,6 +135,7 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [conflict, setConflict] = useState(false);
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -183,6 +188,7 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
     if (email !== "admin@protocolo4d.com") {
       const claim = await claimDeviceSession(false);
       if (claim === "conflict") {
+        setPendingCredentials(parsed.data);
         setLoading(false);
         setConflict(true);
         return;
@@ -196,16 +202,62 @@ function SignInForm({ onSuccess }: { onSuccess: () => void }) {
 
   async function takeOverSession() {
     setLoading(true);
-    await claimDeviceSession(true);
-    setLoading(false);
-    setConflict(false);
-    toast.success("Sessão anterior encerrada. Bem-vindo de volta!");
-    onSuccess();
+    try {
+      // 1. Assegura que o cliente Supabase possui uma sessão autenticada ativa
+      const { data: sessData } = await supabase.auth.getSession();
+      if (!sessData?.session && pendingCredentials) {
+        const { error: reAuthError } = await supabase.auth.signInWithPassword(pendingCredentials);
+        if (reAuthError) {
+          setLoading(false);
+          toast.error("Não foi possível autenticar. Por favor, tente entrar novamente.");
+          setConflict(false);
+          setPendingCredentials(null);
+          return;
+        }
+      }
+
+      // 2. Reivindica o dispositivo com takeover forçado no backend
+      const claim = await claimDeviceSession(true);
+      if (claim !== "ok") {
+        setLoading(false);
+        toast.error("Não foi possível encerrar a sessão anterior. Tente novamente.");
+        return;
+      }
+
+      // 3. Valida no backend se este dispositivo agora é o ativo
+      const isValid = await validateDeviceSession();
+      if (!isValid) {
+        await new Promise((r) => setTimeout(r, 150));
+        const retryValid = await validateDeviceSession();
+        if (!retryValid) {
+          setLoading(false);
+          toast.error("Falha ao registrar novo dispositivo. Tente novamente.");
+          return;
+        }
+      }
+
+      setLoading(false);
+      setConflict(false);
+      setPendingCredentials(null);
+      toast.success("Sessão anterior encerrada. Bem-vindo de volta!");
+      
+      // Conclui login no dispositivo atual
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      console.error("Erro ao assumir sessão:", err);
+      setLoading(false);
+      toast.error("Ocorreu um erro ao encerrar a sessão anterior. Tente novamente.");
+    }
   }
 
   async function cancelTakeOver() {
+    setLoading(true);
     setConflict(false);
-    await supabase.auth.signOut();
+    setPendingCredentials(null);
+    try {
+      await supabase.auth.signOut();
+    } catch {}
+    setLoading(false);
   }
 
   if (conflict) {
