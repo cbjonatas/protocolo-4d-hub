@@ -11,7 +11,7 @@ import {
   XCircle,
   FileText,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -114,7 +114,14 @@ const DEFAULT_QUESTIONS: Question[] = [
 ];
 
 async function fetchGoalQuestions(goalId: string): Promise<Question[]> {
-  const { data: qs } = await supabase
+  const isUuid = (s: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || "");
+
+  if (!isUuid(goalId)) {
+    return DEFAULT_QUESTIONS;
+  }
+
+  const { data: qs, error } = await supabase
     .from("questions")
     .select(
       "id, statement, explanation, order_index, is_published, question_options(id, label, content, is_correct, order_index)",
@@ -123,7 +130,7 @@ async function fetchGoalQuestions(goalId: string): Promise<Question[]> {
     .eq("is_published", true)
     .order("order_index");
 
-  if (!qs || qs.length === 0) {
+  if (error || !qs || qs.length === 0) {
     return DEFAULT_QUESTIONS;
   }
 
@@ -146,15 +153,21 @@ function GoalPage() {
     queryKey: ["course-full", slug],
     queryFn: () => fetchFullCourse(slug),
   });
+  const isUuid = (s: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || "");
+
   const { data: goal } = useQuery({
     queryKey: ["goal", goalId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("question_goals")
-        .select("*")
-        .eq("id", goalId)
-        .maybeSingle();
-      return data ?? DEFAULT_GOALS.find((g) => g.id === goalId) ?? DEFAULT_GOALS[0];
+      if (isUuid(goalId)) {
+        const { data, error } = await supabase
+          .from("question_goals")
+          .select("*")
+          .eq("id", goalId)
+          .maybeSingle();
+        if (!error && data) return data;
+      }
+      return DEFAULT_GOALS.find((g) => g.id === goalId) ?? DEFAULT_GOALS[0];
     },
   });
   const { data: questions, isLoading: qLoading } = useQuery({
@@ -164,6 +177,7 @@ function GoalPage() {
   const { data: attempts } = useQuery({
     queryKey: ["goal-attempts", goalId],
     queryFn: async () => {
+      if (!isUuid(goalId)) return [];
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return [];
       const { data } = await supabase
@@ -179,6 +193,7 @@ function GoalPage() {
   const { data: inProgressAttempt } = useQuery({
     queryKey: ["goal-in-progress", goalId],
     queryFn: async () => {
+      if (!isUuid(goalId)) return null;
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return null;
       const { data: attempt } = await supabase
@@ -196,7 +211,8 @@ function GoalPage() {
       const { data: answersData } = await supabase
         .from("question_answers")
         .select("question_id, selected_option_id, created_at")
-        .eq("attempt_id", attempt.id);
+        .eq("attempt_id", attempt.id)
+        .order("created_at", { ascending: true });
 
       const map: Record<string, string> = {};
       (answersData ?? []).forEach((r: any) => {
@@ -215,14 +231,15 @@ function GoalPage() {
   // Quiz state
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [activeAttemptId, setActiveAttemptId] = useState<string | null>(null);
-  const [loadedInitial, setLoadedInitial] = useState(false);
   const [current, setCurrent] = useState(0);
   const [finished, setFinished] = useState<null | { correct: number; total: number }>(null);
   const [openPdf, setOpenPdf] = useState(false);
+  const [initializedFromDb, setInitializedFromDb] = useState(false);
+  const [positionInitialized, setPositionInitialized] = useState(false);
 
-  // Recupera respostas e última questão acessada ao entrar na meta
+  // 1. Recupera respostas salvas do banco de dados (e fallback local)
   useEffect(() => {
-    if (loadedInitial) return;
+    if (initializedFromDb) return;
 
     let initialMap: Record<string, string> = {};
 
@@ -242,29 +259,37 @@ function GoalPage() {
     } catch {}
 
     if (Object.keys(initialMap).length > 0) {
-      setAnswers(initialMap);
+      setAnswers((prev) => ({ ...initialMap, ...prev }));
     }
 
-    // 3. Recupera última questão acessada
+    if (inProgressAttempt !== undefined) {
+      setInitializedFromDb(true);
+    }
+  }, [inProgressAttempt, goalId, initializedFromDb]);
+
+  // 2. Recupera última questão acessada assim que questions estiverem carregadas
+  useEffect(() => {
+    if (positionInitialized || !questions || questions.length === 0) return;
+
     try {
       const lastQStr = localStorage.getItem(`p4d_last_q_${goalId}`);
-      if (lastQStr !== null && questions && questions.length > 0) {
+      if (lastQStr !== null) {
         const idx = parseInt(lastQStr, 10);
         if (!isNaN(idx) && idx >= 0 && idx < questions.length) {
           setCurrent(idx);
+          setPositionInitialized(true);
+          return;
         }
-      } else if (questions && questions.length > 0 && Object.keys(initialMap).length > 0) {
-        const firstUnanswered = questions.findIndex((q) => !initialMap[q.id]);
-        if (firstUnanswered !== -1) {
-          setCurrent(firstUnanswered);
-        }
+      }
+      // Se não houver última salva, foca na primeira não respondida
+      const firstUnanswered = questions.findIndex((q) => !answers[q.id]);
+      if (firstUnanswered !== -1) {
+        setCurrent(firstUnanswered);
       }
     } catch {}
 
-    if (inProgressAttempt !== undefined) {
-      setLoadedInitial(true);
-    }
-  }, [inProgressAttempt, goalId, questions, loadedInitial]);
+    setPositionInitialized(true);
+  }, [questions, goalId, positionInitialized, answers]);
 
   // Salva automaticamente cada alternativa selecionada no banco de dados e localmente
   async function handleSelectOption(questionId: string, optionId: string) {
@@ -280,15 +305,14 @@ function GoalPage() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
 
-      const isUuid = (s: string) =>
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || "");
+      if (!isUuid(goalId) || !isUuid(questionId) || !isUuid(optionId)) return;
 
       const currentQ = questions?.find((q) => q.id === questionId);
       const opt = currentQ?.options?.find((o) => o.id === optionId);
       const isCorrect = !!opt?.is_correct;
 
-      if (isUuid(goalId) && isUuid(questionId) && isUuid(optionId)) {
-        // Tenta função RPC atômica se disponível
+      // Tenta RPC atômico primeiro (se existente)
+      try {
         const { data: rpcRes, error: rpcErr } = await supabase.rpc("save_goal_question_answer", {
           p_goal_id: goalId,
           p_question_id: questionId,
@@ -303,57 +327,60 @@ function GoalPage() {
           qc.invalidateQueries({ queryKey: ["course-full", slug] });
           return;
         }
+      } catch {}
 
-        // Fallback: Query direta no Supabase
-        let attemptId = activeAttemptId;
-        if (!attemptId) {
-          const { data: existingAtt } = await supabase
+      // Fallback: Gerenciamento direto de tentativa e resposta no Supabase
+      let attemptId = activeAttemptId;
+      if (!attemptId) {
+        const { data: existingAtt } = await supabase
+          .from("question_attempts")
+          .select("id")
+          .eq("user_id", u.user.id)
+          .eq("goal_id", goalId)
+          .is("finished_at", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingAtt) {
+          attemptId = existingAtt.id;
+        } else {
+          const { data: newAtt } = await supabase
             .from("question_attempts")
+            .insert({
+              user_id: u.user.id,
+              goal_id: goalId,
+              total: questions?.length ?? 0,
+              correct_count: 0,
+              finished_at: null,
+            })
             .select("id")
-            .eq("user_id", u.user.id)
-            .eq("goal_id", goalId)
-            .is("finished_at", null)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (existingAtt) {
-            attemptId = existingAtt.id;
-          } else {
-            const { data: newAtt } = await supabase
-              .from("question_attempts")
-              .insert({
-                user_id: u.user.id,
-                goal_id: goalId,
-                total: questions?.length ?? 0,
-                correct_count: 0,
-                finished_at: null,
-              })
-              .select("id")
-              .single();
-            if (newAtt) attemptId = newAtt.id;
-          }
-          if (attemptId) setActiveAttemptId(attemptId);
+            .single();
+          if (newAtt) attemptId = newAtt.id;
         }
+        if (attemptId) setActiveAttemptId(attemptId);
+      }
 
-        if (attemptId) {
-          const { data: existingAns } = await supabase
+      if (attemptId) {
+        const { data: existingAns } = await supabase
+          .from("question_answers")
+          .select("id")
+          .eq("attempt_id", attemptId)
+          .eq("question_id", questionId)
+          .maybeSingle();
+
+        if (existingAns) {
+          const { data: updData, error: updErr } = await supabase
             .from("question_answers")
-            .select("id")
-            .eq("attempt_id", attemptId)
-            .eq("question_id", questionId)
-            .maybeSingle();
+            .update({
+              selected_option_id: optionId,
+              is_correct: isCorrect,
+              created_at: new Date().toISOString(),
+            })
+            .eq("id", existingAns.id)
+            .select("id");
 
-          if (existingAns) {
-            await supabase
-              .from("question_answers")
-              .update({
-                selected_option_id: optionId,
-                is_correct: isCorrect,
-                created_at: new Date().toISOString(),
-              })
-              .eq("id", existingAns.id);
-          } else {
+          if (updErr || !updData || updData.length === 0) {
             await supabase
               .from("question_answers")
               .insert({
@@ -364,8 +391,18 @@ function GoalPage() {
                 created_at: new Date().toISOString(),
               });
           }
-          qc.invalidateQueries({ queryKey: ["course-full", slug] });
+        } else {
+          await supabase
+            .from("question_answers")
+            .insert({
+              attempt_id: attemptId,
+              question_id: questionId,
+              selected_option_id: optionId,
+              is_correct: isCorrect,
+              created_at: new Date().toISOString(),
+            });
         }
+        qc.invalidateQueries({ queryKey: ["course-full", slug] });
       }
     } catch (e) {
       console.error("Erro ao salvar resposta no banco:", e);
@@ -375,7 +412,7 @@ function GoalPage() {
   const complete = useMutation({
     mutationFn: async (done: boolean) => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error();
+      if (!u.user || !isUuid(goalId)) return;
       if (done)
         await supabase.from("goal_progress").insert({ user_id: u.user.id, goal_id: goalId });
       else
@@ -451,7 +488,7 @@ function GoalPage() {
       qc.invalidateQueries({ queryKey: ["goal-attempts", goalId] });
       qc.invalidateQueries({ queryKey: ["goal-in-progress", goalId] });
       qc.invalidateQueries({ queryKey: ["course-full", slug] });
-      if (res.correct >= Math.ceil(res.total * 0.7) && !courseData?.goalProgress.has(goalId)) {
+      if (res.correct >= Math.ceil(res.total * 0.7) && !courseData?.goalProgress?.has?.(goalId)) {
         complete.mutate(true);
       }
       toast.success("Meta finalizada!");
@@ -460,7 +497,7 @@ function GoalPage() {
   });
 
   const answeredCount = Object.keys(answers).length;
-  const isGoalCompleted = !!courseData?.goalProgress.has(goal?.id ?? "");
+  const isGoalCompleted = !!courseData?.goalProgress?.has?.(goal?.id ?? "");
   const isGoalInProgress = !isGoalCompleted && !finished && answeredCount > 0;
 
   const percent = useMemo(() => {
@@ -493,7 +530,8 @@ function GoalPage() {
   const { status, releaseDate } = computeStatus(
     goal.release_offset_days,
     courseData.enrollment?.enrolled_at,
-    courseData.goalProgress.has(goal.id),
+    courseData.goalProgress?.has ? courseData.goalProgress.has(goal.id) : false,
+    isGoalInProgress,
   );
 
   if (status === "locked") {
@@ -519,6 +557,8 @@ function GoalPage() {
   }
 
   const hasQuestions = !!questions && questions.length > 0;
+  const safeCurrent = hasQuestions ? Math.min(Math.max(0, current), questions.length - 1) : 0;
+  const currentQuestion = hasQuestions ? questions[safeCurrent] : null;
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
@@ -574,30 +614,31 @@ function GoalPage() {
           </div>
         )}
 
-        {hasQuestions && !finished && (
+        {hasQuestions && !finished && currentQuestion && (
           <div className="mt-6">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>
-                Questão {current + 1} de {questions!.length}
+                Questão {safeCurrent + 1} de {questions.length}
               </span>
-              <span>{Object.keys(answers).length} respondidas</span>
+              <span>{answeredCount} respondidas</span>
             </div>
             <Progress value={percent} className="mt-2 h-2" />
 
             <div className="mt-6 rounded-xl border border-border bg-background/60 p-5">
               <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Questão {current + 1}
+                Questão {safeCurrent + 1}
               </div>
               <p className="mt-2 whitespace-pre-wrap font-medium">
-                {questions![current].statement}
+                {currentQuestion.statement}
               </p>
               <div className="mt-4 space-y-2">
-                {questions![current].options.map((o) => {
-                  const selected = answers[questions![current].id] === o.id;
+                {currentQuestion.options.map((o) => {
+                  const selected = answers[currentQuestion.id] === o.id;
                   return (
                     <button
                       key={o.id}
-                      onClick={() => setAnswers((a) => ({ ...a, [questions![current].id]: o.id }))}
+                      type="button"
+                      onClick={() => handleSelectOption(currentQuestion.id, o.id)}
                       className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
                         selected
                           ? "border-primary bg-primary/10"
@@ -619,16 +660,28 @@ function GoalPage() {
             <div className="mt-6 flex justify-between">
               <Button
                 variant="outline"
-                disabled={current === 0}
-                onClick={() => setCurrent((c) => c - 1)}
+                disabled={safeCurrent === 0}
+                onClick={() => {
+                  const prevIdx = Math.max(0, safeCurrent - 1);
+                  setCurrent(prevIdx);
+                  try {
+                    localStorage.setItem(`p4d_last_q_${goalId}`, String(prevIdx));
+                  } catch {}
+                }}
               >
                 Anterior
               </Button>
-              {current < questions!.length - 1 ? (
+              {safeCurrent < questions.length - 1 ? (
                 <Button
                   className="bg-gradient-primary shadow-glow"
-                  disabled={!answers[questions![current].id]}
-                  onClick={() => setCurrent((c) => c + 1)}
+                  disabled={!answers[currentQuestion.id]}
+                  onClick={() => {
+                    const nextIdx = Math.min(questions.length - 1, safeCurrent + 1);
+                    setCurrent(nextIdx);
+                    try {
+                      localStorage.setItem(`p4d_last_q_${goalId}`, String(nextIdx));
+                    } catch {}
+                  }}
                 >
                   Próxima
                 </Button>
@@ -636,7 +689,7 @@ function GoalPage() {
                 <Button
                   className="bg-gradient-primary shadow-glow"
                   disabled={
-                    submitAttempt.isPending || Object.keys(answers).length < questions!.length
+                    submitAttempt.isPending || Object.keys(answers).length < questions.length
                   }
                   onClick={() => submitAttempt.mutate()}
                 >
@@ -661,6 +714,13 @@ function GoalPage() {
               setAnswers({});
               setCurrent(0);
               setFinished(null);
+              setActiveAttemptId(null);
+              setPositionInitialized(false);
+              setInitializedFromDb(false);
+              try {
+                localStorage.removeItem(`p4d_last_q_${goalId}`);
+                localStorage.removeItem(`p4d_goal_answers_${goalId}`);
+              } catch {}
             }}
           />
         )}
